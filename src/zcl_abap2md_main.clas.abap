@@ -1,15 +1,20 @@
-CLASS zcl_abap2md_main DEFINITION
-  PUBLIC
-  FINAL
-  CREATE PUBLIC .
+class ZCL_ABAP2MD_MAIN definition
+  public
+  final
+  create public .
 
-  PUBLIC SECTION.
-    INTERFACES if_oo_adt_classrun.
-    METHODS generate_single     IMPORTING iv_name        TYPE seoclname
-                                RETURNING VALUE(rt_text) TYPE stringtab
-                                RAISING
-                                          zcx_abap2md_error.
-    METHODS generate_multiple .
+public section.
+
+  interfaces IF_OO_ADT_CLASSRUN .
+
+  methods GENERATE_SINGLE
+    importing
+      !IV_NAME type SEOCLNAME
+    returning
+      value(RT_TEXT) type STRINGTAB
+    raising
+      ZCX_ABAP2MD_ERROR .
+  methods GENERATE_MULTIPLE .
   PROTECTED SECTION.
   PRIVATE SECTION.
     DATA: mt_class_interface_info_set TYPE STANDARD TABLE OF rpyclci,
@@ -449,12 +454,9 @@ CLASS ZCL_ABAP2MD_MAIN IMPLEMENTATION.
   METHOD find_next_jd_tag.
 **/
 * This method collects the description until the next JavaDoc-like tag
-*  Known tag values:
-*   - Method docu starts:   CL_CLASS_DOCU_GENERATOR=>CO_JD_DOCU_START
-*   - Method docu end:      CL_CLASS_DOCU_GENERATOR=>CO_JD_DOCU_END
-*   - Parameter:            CL_CLASS_DOCU_GENERATOR=>CO_JD_PARAM
-*   - Return:               CL_CLASS_DOCU_GENERATOR=>CO_JD_RETURN
-*   - Exception:            CL_CLASS_DOCU_GENERATOR=>CO_JD_THROWS
+* Known tag values:
+* *EXCEPTION*, *PARAM*, *RETURN*, *THROWS* started by a leading @
+*
 *
 * @param EV_NEXT_TAG        Next/Last found tag
 * @param EV_TAG_VALUE       Tag value
@@ -613,6 +615,10 @@ CLASS ZCL_ABAP2MD_MAIN IMPLEMENTATION.
 
 
   METHOD generate_single.
+**/
+* @param iv_name is the class name of the class to be documented. This name can be in lower case.
+* @return a string table containing the raw mark down description of the class.
+*/
     DATA: text_line TYPE string.
 
     read_class_info( iv_name ).
@@ -636,9 +642,11 @@ CLASS ZCL_ABAP2MD_MAIN IMPLEMENTATION.
       APPEND INITIAL LINE TO rt_text.
       write_description(    EXPORTING   i_description = method-description
                             CHANGING    i_out         = rt_text ).
-
+      APPEND INITIAL LINE TO rt_text.
       write_out_params(     EXPORTING   i_method = method
                             CHANGING    ct_text = rt_text ).
+
+
     ENDLOOP.
 
 
@@ -1067,7 +1075,7 @@ CLASS ZCL_ABAP2MD_MAIN IMPLEMENTATION.
     DATA start TYPE c VALUE ':'.
     LOOP AT i_description INTO text_line.
       IF text_line IS NOT INITIAL.
-        APPEND |{ start }       { text_line }| TO i_out.
+        APPEND |{ start }  { text_line }| TO i_out.
         CLEAR start.
       ENDIF.
     ENDLOOP.
@@ -1114,14 +1122,26 @@ CLASS ZCL_ABAP2MD_MAIN IMPLEMENTATION.
                             iv_dir   = 'RETURNING'
                           CHANGING
                             ct_text = ct_text ).
+    IF i_method-return_info IS NOT INITIAL.
+      APPEND |    RETURNING| TO ct_text.
+      APPEND |        VALUE({ i_method-return_info-parameter_name WIDTH = 35 }) TYPE { i_method-return_info-data_type }| TO ct_text.
+    ENDIF.
 
     LOOP AT i_method-parameter_infos INTO par.
-      APPEND INITIAL LINE TO ct_text.
-      APPEND |**{ par-parameter_name }**|  TO ct_text.
-      write_definition(     EXPORTING i_description = par-description
-                            CHANGING i_out         = ct_text ).
+      IF par-descr_found = abap_true.
+        APPEND INITIAL LINE TO ct_text.
+        APPEND |**{ par-parameter_name }**|  TO ct_text.
+        write_definition(     EXPORTING i_description = par-description
+                              CHANGING i_out         = ct_text ).
+      ENDIF.
     ENDLOOP.
 
+    IF i_method-return_info IS NOT INITIAL AND i_method-return_info-descr_found = abap_true.
+      APPEND INITIAL LINE TO ct_text.
+      APPEND |**{ i_method-return_info-parameter_name }**| TO ct_text.
+      write_definition(     EXPORTING i_description = i_method-return_info-description
+                            CHANGING i_out         = ct_text ).
+    ENDIF.
 
   ENDMETHOD.
 
@@ -1131,9 +1151,9 @@ CLASS ZCL_ABAP2MD_MAIN IMPLEMENTATION.
     DATA par TYPE zcl_abap2md_main=>crms_parameter_info.
 
     IF line_exists( i_method-parameter_infos[ direction = iv_dir ] ).
-      APPEND iv_dir TO ct_text.
+      APPEND |    { iv_dir }| TO ct_text.
       LOOP AT i_method-parameter_infos INTO par WHERE direction = iv_dir.
-        APPEND |{ par-parameter_name } TYPE { par-data_type }|  TO ct_text.
+        APPEND |        { par-parameter_name WIDTH = 35 } TYPE { par-data_type }|  TO ct_text.
       ENDLOOP.
     ENDIF.
 
