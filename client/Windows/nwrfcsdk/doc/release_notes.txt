@@ -1,0 +1,748 @@
+Release notes SAP NetWeaver RFC SDK 7.50 
+========================================
+
+
+Please read the license terms and release notes carefully.
+
+--------------------------------------------------------------------------------
+
+This product is the property of SAP SE. You are granted usage of this product in
+your development environment. Deploying this product with your application in a
+production environment is valid only with the sufficient amount of SAP Software
+Licenses according to the terms and conditions of SAP Software.
+
+THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE IMPLIED WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT.
+SAP SE further does not warrant the accuracy or completeness of the information,
+text, graphics, links or other items contained within these materials. SAP SE
+shall not be liable for any special, indirect, incidental or consequential
+damages, including without limitation, lost revenues or lost profits, which may
+result from the use of these materials. The information in this software is
+subject to change without notice and does not represent a commitment on the
+part of SAP SE in the future.
+
+--------------------------------------------------------------------------------
+Release Notes 7.50.9:
+
+* Bugfix: In some situations the error message "POSIX_CLOCK: ERROR in get_posix_nanoseconds() !!!!! (ret = -1)"
+  is printed to the console. This happens when a server receives a call or a client receives an RFC callback,
+  and none of the following actions have yet occured:
+  - no trace entry has yet been written
+  - no entry to the dev_rfc.log has yet been written
+  - no Websocket call has yet been made
+  - and no throughput object has yet been created.
+    
+* Bugfix: Websocket server
+  When shutting down a Websocket server, open connections are not properly closed, which results in a memory leak.
+  
+* Bugfix: Tracing
+  Setting the RFC_MINIMUM_TRACE_LEVEL does not increase the global trace level, if the current global trace level
+  is smaller than the minimum.
+  
+* Bugfix: tRFC
+  If no transaction handler for tRFC is installed, a crash in ~RfcTransaction can occur.
+  
+* Bugfix: Setter/Getter API
+  Calling a setter API on a cloned row structure of a table, after deleting the original table, leads to a crash.
+
+* Bugfix: XRfc
+  When receiving an XRfc call (nested structures or tables in IMPORTING/EXPORTING/CHANGING), the XRfcParser can crash,
+  if the call contains a parameter/field whose name is 30 characters long, contains one _ (underscore) character in the
+  middle and ends with an _ (underscore character), and if this fieldname is split accross two network containers in
+  such a way, that the middle underscore character is the last character of the first container.
+
+* Bugfix: RFC Callback
+  ABAP dump information is not written to dev_rfc.log in case of an RFC Callback.
+
+* Enhancement: Throughput
+  Two new getters for the time for reading and writing to the network were added: RfcGetNetworkWritingTime() and RfcGetNetworkReadingTime().
+  
+* Enhancement: Websocket server
+  The two APIs RfcSetWebsocketPingInterval() and RfcSetWebsocketPongTimeout() allow setting the global 
+  Websocket ping idle time interval and pong reply timeout for Websocket servers. Both values can also be set
+  via RFC_WEBSOCKET_PING_INTERVAL and RFC_WEBSOCKET_PONG_TIMEOUT in the sapnwrfc.ini.
+  
+* Enhancement: Tracing
+  The trace level 4 was introduced, so that setter and getter APIs can be turned off separately.
+  
+* Enhancement: t/q/bgRFC
+  The convenvience function RfcConfirmTransactionID() has been added to allow confirming a TID
+  without the need to store the RFC_TRANSACTION_HANDLE.
+  
+
+--------------------------------------------------------------------------------
+
+Release Notes 7.50.8:
+
+* Bugfix: Metadata API
+  Some APIs (RfcGetFunctionDesc(), RfcGetCachedFunctionDesc(), RfcGetTypeDesc(), 
+  RfcGetCachedTypeDesc()) returned RFC_OK in the error info structure, although
+  the description/handle was not found and is NULL.
+  
+* Bugfix: Tracing
+  Resetting the global trace level to zero via API RfcSetTraceLevel() 
+  did not trace finishing the API. 
+  
+* Bugfix: RFC runtime
+  When canceling a CPIC connection, the connection was not deleted leaked memory. 
+  
+* Bugfix: RFC runtime
+  Logging an error caused by not finding the UUID daemon in DllMainInit, lead to a crash
+  due to accessing a null FILE pointer.
+  
+* Bugfix: RFC runtime
+  Certain amounts of data received from some SAP systems could cause a crash, due to incomplete
+  skipping of data when reading from the network.
+  
+* Bugfix: RFC runtime
+  When using the DEST connection parameter, the parameter USE_REPOSITORY_ROUNDTRIP_OPTIMIZATION was
+  overwritten.
+  
+* Bugfix: Websocket RFC runtime
+  Long running Websocket connections could lead to callstack overflow when pings are exchanged.
+  
+* Bugfix: RFC runtime
+  Multithreaded applications could experience refused connections by the backend system. In those cases
+  the communication with the message server lead to invalid hostname/IP which were not found.
+  
+* Bugfix: SNC communication
+  The password was sent to backend system when connection parameter SNC_MODE and SNC_SSO were set.
+  
+* Bugfix: RFC runtime
+  Sending large tables (raw data > 2GB) triggered a faulty compression and lead to failures in RfcInvoke()
+  or server responses.
+  
+* Bugfix: RFC Server
+  The WebSocket server leaked a pointer when deleting it.
+  
+* Enhancement: RFC Throughput
+  The throughput object now collects the server time received from the backend, i.e.
+  time tracked by the backend during the request.
+  The value can be fetched with a new API RfcGetServerTime().
+  Additionally the SDK now transmitts its server time to the backend, which can be viewed in transaction STAD.
+  
+* Enhancement: Tracing
+  The trace has been improved at various places. The socket trace records more called
+  SSL functions.
+  
+
+
+--------------------------------------------------------------------------------
+
+Release Notes 7.50.7:
+
+* Bugfix: RfcServer runtime
+  When using RfcShutdownServer() while at the same time the server is currently
+  sending back the response to an RFC call it received, a race condition could
+  occur.
+
+* Bugfix: character processing
+  On IBM i,  in the EBCDIC variant of NW RFC library, conversion to UTF-8 was not
+  working correctly in some places (writing traces, column-based serialization)
+
+* Bugfix: bgRFC server runtime
+  If an RfcServer program was acting as a bgRFC server, a potential GetUnitState
+  event from the ABAP backend was not  in the EBCDIC variant of NW RFC library 
+  processed correctly and the corresponding handler function installed by the
+  application was not executed.
+
+* Bugfix: RFC runtime 
+  When invoking a remote function module and sending a large amount of data to
+  the communication partner Ц i.e. as IMPORT, CHANGING and/or TABLES parameters Ц
+  the RFC call sometimes did not succeed and RFC_COMMUNICATION_FAILURE with
+  error message text "no SAP ErrInfo available" was reported. At the same time you
+  observed a broken CPIC connection at the RFC communication partner side with
+  detail error text: "Connection reset by peer". This was caused by a timeout on
+  the send operation, for which there shouldn't be any.
+
+* Bugfix: Serialized repository
+  If an incomplete repository JSon file was loaded via RfcLoadRepository(), the
+  application might have crashed.
+  
+* Bugfix: Serialized repository
+  If a repository JSon file was formatted with tabs and newlines,
+  RfcLoadRepository() aborted with an error message like "Expected character '{',
+  but read '\n'".
+
+* Bugfix: Serialized repository
+  Some repository JSon files created by JCo could not be loaded by the NW RFC
+  library. RfcLoadRepository() would abort with the error message "non-unicode
+  offset overlaps with the existing elements".
+
+* Bugfix: WebSocket RFC runtime
+  A WebSocket RFC connection did not send a proper status code when closing. This
+  resulted in a trace entry in the ABAP backend.
+
+* Bugfix: WebSocket RFC Server runtime
+  A WebSocket RFC server did not read the entire HTTP upgrade message from the
+  ABAP backend and closed the connection, if the message exceeded a certain length.
+
+* Bugfix: WebSocket RFC runtime
+  If TLS_TRUST_ALL was enabled, WebSocket RFC client connections did not send the
+  client certificate.
+
+* Bugfix: RFC runtime
+  When communicating with an older Non-Unicode ABAP system, the connection aborted
+  and on ABAP side a shortdump of type CALL_FUNCTION_FORMAT_NOT_SUP was raised.
+
+* Enhancement: RFC with SAP Gui
+  Better error handling when launching SAP Gui on Windows
+
+* Enhancement: Server setup for t/q/bgRFC
+  The NW RFC library now refuses to accept incoming t/q/bgRFC calls, if the
+  application did not install transaction handlers or unit handlers.
+
+* Enhancement: Server authentication handler
+  The managed server now provides an (optional) authentication handler, which
+  applications can install, if they want to perform some kind of logon routine for
+  users connecting to the server.
+  See the documentation of the new APIs RfcInstallAuthenticationCheckHandler() and
+  five more APIs providing additional details about the user currently trying to
+  logon to the server program. A detailed example is provided in the delivery.
+
+* Enhancement: Tracing configuration
+  The NW RFC library now allows to customize the trace file size, after which a
+  "roll over" to a new file takes place, as well as the number of files that should
+  be kept, before the oldest rolled over files get deleted. This can be customized
+  via parameters in sapnwrfc.ini and via two new APIs that have been added:
+  RfcSetMaximumTraceFileSize() and RfcSetMaximumStoredTraceFiles().
+
+* Enhancement: WebSocket RFC PSE handling
+  When establishing a new WebSocket RFC client connection, the PSE is reloaded if
+  it was used before and changed afterwards.
+
+* Bugfix: RFC runtime
+  If a server program of type "started server" calls RfcListenAndDispatch() with an 
+  errorInfo equal to NULL, the program crashes with an Access Violation (Windows) or 
+  SIGSEGV (Unix), when the backend side closes the connection. 
+  (This affects in particular the kernel program sapkprotp -- see SAP note 2962558.)
+  
+* Bugfix: RFC runtime
+  If a program opens many connections at the same time in multiple parallel threads, 
+  the program may occasionally abort due to a failed parameter validation (SIGABRT). 
+  (This affects in particular the Internet Graphics Server IGS (igsmux) -- see SAP note 2963158.)
+
+
+--------------------------------------------------------------------------------
+
+Release Notes 7.50.6:
+
+* Bugfix: metadata lookup
+  When saving a repository which contains function modules with ABAP Exceptions, an
+  invalid Json format is created due to a misplaced comma in the Exceptions section.
+  
+* Bugfix: tracing
+  If a global trace level is set and a connection with trace level 0 is created,
+  the passed parameters and the end tag of RfcOpenConnection() are not traced.
+  
+* Bugfix: tracing
+  On Linux and MacOS systems two threads can accidentally try to write into the same
+  thread trace file, depending on the thread ID.
+  
+* Bugfix: tracing
+  On Windows a wrong line feed is written to the trace file.
+  
+* Bugfix: tracing
+  On Linux the names of exception classes are written to the trace file in a garbled format.
+  
+* Bugfix: table processing
+  Turning off table compression in a client program only works for tables sent into R/3,
+  but not for tables received from R/3.
+  
+* Bugfix: saplogon.ini processing
+  If the sapnwrfc.ini file contains a connection parameter longer than 1023 characters,
+  it is truncated. This affects in particular the parameter X509CERT=... where the logon
+  attempt will fail, if the X.509 certificate is longer than 1014 characters.
+  
+* Bugfix: monitoring
+  For Websocket RFC connections, an attached throughput object accidentally counts the
+  time waiting for data on the network and the time spent in the backend in the deserialization
+  time. This leads to inaccurate time measurements.
+  
+* Bugfix: communication
+  If the ABAP side closes the connection to a started server program normally, the started
+  server program will always receive a final error message:
+  RFC_COMMUNICATION_FAILURE "connection closed without message (CM_NO_DATA_RECEIVED)"
+  Now RfcListenAnDispatch() will simply return RFC_CLOSED in this case, so C/C++ programs can now
+  distinguish, whether the ABAP side is simply finshed with its work and has no more RFC requests,
+  or whether a real network error occured.
+  
+* Bugfix: tracing
+  Every time a program loads the SAP NetWeaver RFC SDK library, an entry including the trace
+  header is written to the dev_rfc.trc file.
+
+
+* Enhancement: communication
+  Attaching a SAPGui to an RFC connection now works via SAPRouter as well as with Group Logon.
+
+* Enhancement: tracing
+  Performance of writing traces was improved.
+
+* Enhancement: connection attributes
+  The RFC_ATTRIBUTES members "partnerHost" and "partnerIP" always return the hostname/IP address
+  of the backend system as they are known by the backend system itself. If Network Address Translation
+  (NAT) is performed between the subnet of the RFC client program and the subnet of the backend system,
+  then this hostname/IP address may be unknown or invalid in the subnet of the RFC client program.
+  Programs that need the "external" IP address with which a TCP/IP connection to the backend system
+  can actually be established from the external network segment, can now obtain it from the new API
+  RfcGetPartnerExternalIP().
+  If no NAT is used in the current scenario, the value returned by this API will be equal to
+  partnerIP/partnerIPv6 from the RFC_ATTRIBUTES.
+
+* Enhancement: Unicode processing
+  The two internal headers sapuc.h and sapucx.h have been replaced with the header sapucrfc.h which
+  corresponds exactly with the functions exported from libsapucum. Also libsapucum on some platforms
+  now exports additional functions, which have so far been missing on these platforms.
+
+* Enhancement: tracing
+  The log file dev_rfc.trc is renamed to dev_rfc.log.
+
+* Enhancement: tracing
+  Managing trace files in multi-threaded programs has been improved.
+
+* Enhancement: communication
+  WebSocket RFC (client and server side) is now supported. This can be used for communicating with
+  SAP systems of kernel release 7.77 over the internet (e.g. via a firewall/HTTP proxy) and for
+  communicating with other external programs based on the latest versions of NW RFC Lib, JCo or NCo.
+  The required connection parameters for WebSocket RFC are documented in the sapnwrfc.ini file.
+
+
+--------------------------------------------------------------------------------
+
+Release Notes 7.50.5:
+
+* Bugfix: memory leak
+  If a registered server ends a call with RFC_NOT_FOUND, the object corresponding to the current
+  connection is leaked.
+
+* Bugfix: error handling
+  If a registered connection is cancelled by backend (e.g. from SMGW), an incorrect return code
+  was returned to the application program. Now the correct RFC_CLOSED is returned.
+
+* Bugfix: table processing
+  If the NW RFC Library receives a table of line type RAW from a Unicode backend, and a line of
+  the table is not filled completely to the end, then this line is left initial (all zero bytes).
+
+* Bugfix: Unicode processing
+  If RfcInvoke() is executed on a connection with ON_CCE=0 (the default setting) against a
+  non-Unicode system, and the return data of the called function module contains a parameter of
+  type structure whose value contains one or more non-convertible/broken characters, then instead
+  of aborting with RFC_CONVERSION_FAILURE (as it should), RfcInvoke() ends with RFC_OK, but in the
+  structure all fields following the field with the first broken character are left empty.
+  
+  
+* Enhancement: metadata creation
+  If an application creates the metadata of a function module manually using RfcCreateFunctionDesc()
+  and then adds exporting parameters to that function description by passing instances of the structure
+  RFC_PARAMETER_DESC into RfcAddParameter(), where not all members of that structure are properly
+  initialized, then it could happen that during the actual function call the backend did not return a
+  value for such an exporting parameter as it was considered to be "inactive". This happened mainly,
+  if the member "defaultValue" of the parameter description was uninitialized, so that it contained
+  non-zero garbage data.
+  Now uninitialized "defaultValue" members in the description of exporting parameters are ignored,
+  so that they are active by default and the backend's return values are transmitted to the external
+  program. (Nevertheless it is recommened that you properly initialize all inputs that you pass into
+  NW RFC API functions! For example an RFC_PARAMETER_DESC structure could be memset to zero, before
+  you use it.)
+  Note: the undesired behaviour of deactivating exporting parameters, if they had a non-zero "defaultValue",
+  is seen only in patch levels 2, 3 and 4. Before that, the problem did not yet occur.
+  
+* Enhancement: encryption
+  New function RfcLoadCryptoLibrary(). This can be used instead of the parameter TLS_SAPCRYPTOLIB,
+  if you want to set the path to the SAP Crypto Library programmatically.
+  
+* Enhancement: RfcServer runtime
+  A stateful RFC server now automatically implements SYSTEM_RESET_RFC_SERVER, so that the ABAP side
+  can reset the user session on C side.
+  
+* Enhancement: tracing
+  The default encoding for trace files is now UTF-8 instead of the current platform encoding, so that
+  traces containing non-ISO characters can now always be written without problems. This behavior can
+  still be overridden via parameter RFC_TRACE_ENCODING or function RfcSetTraceEncoding().
+
+
+--------------------------------------------------------------------------------
+
+Release Notes 7.50.4:
+
+* Bugfix: logon data
+  On Windows: when reading logon information from SAPUILandscape XML files, the
+  registry keys LandscapeFileOnServer and CoreLandscapeFileOnServer are now read
+  from both registries, the 32bit and the 64bit registries. Otherwise it could happen,
+  that the SAPUILandscape XML parser did not find the corresponding XML files.
+
+* Bugfix: logon data
+  On Windows: if a SAPUILandscape XML file contains a comment inside the <Messageservers>,
+  <Services>, <Routers> or <Includes> section, the SAPUILandscape XML parser aborts with
+  an Exception.
+
+* Bugfix: communication
+  If the communication partners have different endianity and the sending side sends a
+  non-compressed table (< 8kB) and the table definition on the sending side contains less
+  (or smaller) fields than the corresponding table definition on the receiving side, then
+  the extra fields on the receiving side are filled with garbage data.
+
+* Bugfix: communication
+  If the communication partners have different endianity, the library side is a registered
+  server program, the RFC destination in SM59 is set to "Non-Unicode" and the server program
+  makes an RFC callback, then CHAR data in the backend system's response to that RFC callback
+  will be corrupted.
+
+* Bugfix: communication
+  If an RFC server program tries to perform an RFC callback on the registered connection at
+  a point of time, where a callback is technically not possible (i.e. while not being inside
+  the processing of an RFC request that was first received from the backend, so that no backend
+  user session is currently attached to the connection), then this could cause the connection
+  to be left in an inconsistent state, and the data of the following incoming requests or
+  outgoing callbacks could be corrupted.
+
+* Bugfix: error handling
+  If an RFC server program uses the "automated server" feature via RfcLaunchServer() and the
+  SAP gateway denies the registration (missing entry in the gateway reginfo file for the
+  corresponding RFC destination), then the automated server constantly tries to re-register
+  in an endless loop.
+  With PL 4, the server will now abort the futile registration attempts. As before, the
+  application will be informed about this problem via the ErrorListener -- but only once per
+  connection instead of millions of times.
+
+* Bugfix: tracing
+  If trace is activated via connection parameter, a server program does not trace
+  function-related details.
+
+* Enhancement: connection attributes
+  The structure RFC_SECURITY_ATTRIBUTES now additionally contains the backend system's SNC ACL key.
+  (See members sncAclKey and sncAclKeyLength.)
+
+* Enhancement: table processing
+  A new function allows to reserve an empty table with the capacity for a given number of rows:
+  RfcReserveCapacity().
+
+* Enhancement: Setter/Getter API
+  Added support for new ABAP datatype UTCLONG: fields of this type can now be read and filled
+  with the API functions RfcSet/GetString() and RfcSet/GetInt8() and the corresponding "by-index"
+  versions.
+
+* Enhancement: tracing
+  It is now possible to activate the NI trace (low level network trace) via API function
+  RfcSetSocketTraceLevel().
+
+* Enhancement: metadata lookup
+  Metadata descriptions of an entire repository can now be saved to file and loaded back in
+  from file via the API functions RfcSaveRepository() and RfcLoadRepository(). The format,
+  in which the repository is saved, is compatible with the corresponding files created by
+  SAP JCo and SAP NCo.
+
+
+--------------------------------------------------------------------------------
+
+Release Notes 7.50.3:
+
+* Bugfix: metadata lookup
+  TurboRepository used wrong parameter length, if Library was Non-Unicode and
+  backend was Unicode.
+
+* Bugfix: metadata lookup
+  If the TurboRepository was not enabled (e.g. because RFC_METADATA_GET did not
+  yet exist in the backend), but RfcMetadataBatchQuery() is used nevertheless,
+  then the query result is empty instead of reporting all queries as "failed".
+
+* Bugfix: bgRFC
+  If the external RFC program was running on an EBCDIC platform, sending a
+  bgRFC unit into a backend system always failed with an error message
+  "Unable to convert from code page 'рстр' to code page '4103'" or similar.
+
+* Bugfix: metadata lookup
+  If during metadata lookup of a nested type1 structure DDIF_FIELDINFO_GET
+  returned an empty LINES_DESC, the process crashed.
+
+* Bugfix: table processing
+  RfcAppendRow() did not move the table cursor to the appended table row.
+
+* Bugfix: communication
+  RFC connections can hang, if CPIC streaming is used with a communication partner
+  that does not yet support streaming.
+
+* Bugfix: Setter/Getter API
+  If a table parameter is defined via a DDIC table type that referes to a line type,
+  the functions RfcSetStructureFromCharBuffer() and RfcGetStructureIntoCharBuffer() return
+  the error message RFC_ILLEGAL_STATE, "Operation possible only for flat structures",
+  even though the structure is flat and char-like.
+
+* Bugfix: tracing
+  Activating the RFC trace in mulitple threads could lead to a deadlock in certain situations.
+
+* Bugfix: DecFloat datatype
+  The previously missing functions for DecFloat processing are now exported from the sapnwrfc lib.
+
+* Bugfix: memory leak
+  If the backend system is currently not available, and an RFC server program keeps trying to
+  reconnect the registered server connection over a period of time, a large amount of memory is leaked.
+
+* Bugfix: serialization
+  If the column-based serialization is used with compression type LAN (parameters SERIALIZATION_FORMAT=
+  CB_SERIALIZATION and COMPRESSION_TYPE=LAN) and extremely large table parameters are transferred,
+  then the program might sporadically crash.
+
+* Enhancement: Setter/Getter API
+  The APIs RfcSet[Structure|Table|AbapObject]() and
+  RfcSet[Structure|Table|AbapObject]ByIndex() now check the input handle for NULL.
+
+* Enhancement: connection attributes
+  The RFC_ATTRIBUTES structure now contains two new members: partnerIP and partnerIPv6.
+
+* Enhancement: monitoring
+  A throughput object has been introduced, with which it is possible to monitor
+  the performance of a connection. Find more details in the documentation.
+
+* Enhancement: Unicode processing
+  The library libsapucum now exports a number of additional U-functions.
+
+* Enhancement: tracing
+  Tracing has been improved to contain timestamps and more exception details.
+
+--------------------------------------------------------------------------------
+
+Release Notes 7.50.2:
+
+* Bugfix: column-based serialization
+  When using the column-based serialization aka fast serialization, an RFC Call
+  might not have worked or sent wrong data when
+  ** calling against a non-unicode system and using char-like parameters.
+  ** using NUMC parameters.
+  ** using not up-to-date metadata of functions and parameters.
+
+* Bugfix: saplogon.ini/SAPUILandscape.xml processing
+  When using saplogon.ini based or SAPUILandscape.xml based logon parameters and
+  the specified file did not exist or a referenced <Include> file did not exist,
+  the application aborted with an uncaught exception.
+
+* Bugfix: SAPUILandscape.xml processing
+  When using SAPUILandscape.xml, the destinations contained in SAPUILandscape
+  XML are not found, because the SAPUILandscape XML parser returns an empty list,
+  if the XML file does not contain an XML preamble and contains comments. The
+  SAPUILandscape parser accidentally interpretes the comments section as SAP system
+  information.
+  Note: this is actually invalid XML format, but early versions of SAPGui 7.40 used
+  to generate such XML files.
+  With 7.50.2, the SAPUILandscape parser can now handle these badly formed files
+  successfully, as long as the <Landscape> section is at the top of the document.
+
+* Bugfix: RfcServer runtime
+  A race condition in RfcShutdownServer() might have lead to a crash, if the server
+  was at the same time trying to restore a closed connection.
+
+* Bugfix: tracing
+  If a multi-threaded program uses the API function RfcSetTraceDir() in different
+  threads at the same time, it may abort with segementation fault/access violation.
+  The call stack in the core dump contains the function RfcSetTraceDir().
+
+* Bugfix: Setter/Getter API
+  On Windows machines with certain non-English locales the functions RfcSetString()
+  or RfcSetFloat() applied to parameters of ABAP type FLOAT or DEC/BCD may crash.
+  In the call stack, the function _wsetlocale() can be seen.
+
+* Bugfix: samples
+  The trace flag ("-t") in the sample program startrfc has no effect. Starting with
+  this patch level, you can now use it in the form "-t x", where x is in the 
+  range 1 - 3.
+
+* Bugfix: samples
+  If the program rfcexec is used in an ALE scenario and the exported function module
+  RFC_REMOTE_EXEC is called with parameter READ not set to 'X', then the executed
+  command/program may fail with the following error, if it tries to write to
+  stdout:
+  ** On Windows: "The process tried to write to a nonexistent pipe" (or sometimes
+     "write error")
+  ** On Unix/Linux: "write error: broken pipe"
+
+* Bugfix: parameter processing
+  If an IMPORTING or CHANGING parameter of a function module has a default value
+  defined, and an RFC client application calls this function module without setting
+  a value for this parameter, then this default value accidentally gets overwritten
+  by an initial value. 
+  Consequently the ABAP code, when being executed, is using the initial value
+  (e.g. spaces or zeros) instead of the expected default value.
+
+* Bugfix: compiling & linking
+  On Windows, when linking a program against the sapnwrfc.lib contained in the
+  NW RFC SDK, it can happen that the resulting executable is looking for a
+  sapnwrfc.dll with a wrong name and consequently fails to start up.
+
+* Bugfix: runtime
+  An RFC request that receives TABLE parameters may abort with
+  RFC_MEMORY_INSUFFICIENT, even if the table data is relatively small.
+
+* Enhancement: column-based serialization
+  The overall performance of the column-based serialization was improved.
+
+* Enhancement: column-based serialization
+  The performance of the column-based serialization was improved dramatically when
+  sending the same tables multiple times or sending tables which were previously
+  received with the column-based serialization.
+
+* Enhancement: Setter/Getter API
+  RfcSetString() is now more tolerant as to what kind of input it accepts: hexadecimal
+  digits may now also be given in lowercase.
+
+* Enhancement: platforms
+  MacOSX is now available for download as additional platform.
+
+--------------------------------------------------------------------------------
+
+Release Notes 7.50.1:
+
+* Bugfix: missing type definitions
+  When compiling RFC programs that use the DecFloat library (header file
+  sapdecf.h), the compiler complained about missing type definitions for
+  types SAP_LLONG and SAP_ULLONG. The missing definitions have been 
+  added.
+
+* Bugfix: RFCServer runtime 
+  An RFC server program crashed in the following situation: 
+  ** The program receives a function call from ABAP. 
+  ** In the function handler, it triggers a callback to ABAP via RfcInvoke(). 
+  ** During this callback, the network connection breaks down, e.g. because
+     of network problems or because of an abort on ABAP side. 
+  This caused the connection object to be deleted inside RfcInvoke(), but
+  when processing of the original function call that came in from ABAP
+  continued, the RFC library still used the deleted connection object,
+  leading to a crash. 
+
+* Bugfix: corrupt sapnwrfc.pdb
+  On Microsoft Windows systems, the sapnwrfc.pdb file could not be used to see
+  internal symbol information of the sapnwrfc.dll library. 
+
+* Bugfix: crash in SAPUILandscape.xml processing 
+  On Microsoft Windows systems, if the SAPGui installation has set the registry
+  key HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\SAP\SAPLogon\LandscapeFormatEnabled=1
+  and the SAPUILandscape.xml file contains a MessageServer entry where the
+  "port" attribute is missing, and the RFC application uses one of the connection
+  parameters DEST or SAPLOGON_ID, the RFC library crashed while parsing the
+  SAPUILandscape.xml file.
+  
+* Bugfix: saplogon.ini/SAPUILandscape.xml processing
+  On Microsoft Windows systems, if the RFC application used the connection 
+  parameter DEST to read further parameters from the sapnwrfc.ini file, and
+  SAPGui was installed on the machine, the RFC library also accidentally tried
+  to open the saplogon.ini file or the SAPUILandscape.xml file, depending on
+  which mechanism is used by SAPGui. 
+  (See the above registry key "LandscapeFormatEnabled".)
+
+* Bugfix: tracing
+  Fields and parameters of type XSTRING were not traced to the RFC trace file
+  correctly.
+
+* Bugfix: tracing
+  Scalar parameters, whose byte length is less than 8, were not traced to the
+  RFC trace file correctly.
+
+* Bugfix: RfcServer runtime
+  It might have happened in certain situations, that an automated server which
+  was currently shutting down (RfcShutdownServer() had been called), was still
+  trying to register new connections at the gateway.
+
+* Bugfix: RfcServer runtime
+  Due to a race condition between the thread that calls RfcShutdownServer() and
+  worker threads processing incoming RFC requests, an automated RFC server
+  might have crashed during shutdown.
+
+* Bugfix: connection leak
+  If the callback function RFC_ON_PASSWORD_CHANGE returned an error code, while
+  trying to change an initial or expired password, a stale connection to the
+  backend remained open forever. 
+
+* Enhancement: Unicode processing in RfcServer runtime
+  An RFC server registered at a non-Unicode destination or against a dynamic
+  destination (i.e. a destination not defined in SM59 and used via
+  SYSTEM_CONNECT_TO_REG_SERVER) now automatically switches to Unicode upon
+  receiving the first request, if the backend system is Unicode. 
+
+* Enhancement: SSO ticket retrieval
+  RfcGetPartnerSSOTicket() can now also be used to obtain a ticket from a client
+  connection. (Prior to this, it worked only for server connections.)
+
+* Enhancement: session handling for automated RFC server 
+  Applicatons using an automated (multi-count) RFC server, can now register a
+  handler to receive notifications whenever a stateful user session starts or
+  ends. See callback function RFC_SERVER_SESSION_CHANGE_LISTENER and function
+  RfcGetSessionEventAsString(). 
+
+* Enhancement: Additional Setter/Getter API
+  Two new functions are now available for setting an entire structure/table-row
+  from a char buffer or reading its value into a char buffer. See functions
+  RfcSetStructureFromCharBuffer() and RfcGetStructureIntoCharBuffer(). For
+  processing tables with many small fields and lots of rows, this can mean a
+  huge performance gain.
+
+* Enhancement: saplogon.ini/SAPUILandscape.xml processing
+  Applications using saplogon.ini or SAPUILandscape.xml can now read the set of
+  logon parameters for a given LOGON_ID. See new functions RfcGetSaplogonEntry()
+  and RfcFreeSaplogonEntry().
+
+* Enhancement: SAProuter usage
+  A new function is available to return the SAProuter string over which the
+  connection has been established, if any. See function RfcGetSapRouter().
+
+* Enhancement: client connection management
+  RFC client programs can now avoid problems with firewall/router timeouts
+  during long running RFC requests by activating periodic pings on CPIC level.
+  See function RfcSetCpicKeepalive(). 
+
+* Enhancement: tracing
+  The RFC trace now traces more specific details in case of codepage conversion
+  errors. 
+
+* Enhancement: platforms
+  The following additional platforms are now available for download:
+  ** Linux on PowerPC big-endian architecture
+  ** Linux on IBM zSeries
+
+
+
+--------------------------------------------------------------------------------
+
+Release notes 7.50
+
+Compared to SAP NetWeaver RFC SDK 7.20, release 7.50 is built on top of newer compilers,
+C runtimes, and operating systems. The API remained backward compatible with earlier
+releases. so existing programs should continue to work unchanged, when running them with
+the new library. Nevertheless, it makes sense to recompile existing programs against the 
+new library in order to update also the application program's compiler and C runtime versions.
+
+
+
+With NetWeaver RFC SDK 7.50 you get the following new features:
+---------------------------------------------------------------
+
+* Support for the fast serialization format, technically a column-based serialization of 
+  the data, which has been shipped initially with application server ABAP 7.51.
+
+* When function module invocations last longer than desired, RFC client programs do now
+  have the possibility to cancel the execution of the function mdoule on ABAP server
+  side.
+
+* Support for ABAP INT8 datatype.
+
+* On Windows systems: support of saplogon.ini and SAPUILandscape.xml. This allows to establish
+  connections easily by using the connection parameters already defined in your SAPGui
+  installation.
+
+* A new way of programming a registered server has been introduced that is similar to the 
+  approach used by JCo and NCo. 
+  ** Server takes care of connection management & automatic restart of broken registrations.
+     -- No more involved dispatch-loop!
+  ** Server can now be used for stateful progamming (server can keep session state across
+     multiple function calls).
+  ** Group registration at a system for easy support of "Rolling Kernel Switch": instead
+     of registering only at one specific gateway, a server program can register at all 
+     gateways belonging to one logon group. If one application server is shutdown/restarted,
+     the external program can still be reached via the remaining gateways.
+
+* Configurable authorization checks for servers based on the communication partner's
+  SysID and SNC name.
+
+--------------------------------------------------------------------------------
+
+Copyright © 2006-2018 SAP SE. All Rights Reserved.
+
