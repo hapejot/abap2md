@@ -1,20 +1,20 @@
-class ZCL_ABAP2MD_MAIN definition
-  public
-  final
-  create public .
+CLASS zcl_abap2md_main DEFINITION
+  PUBLIC
+  FINAL
+  CREATE PUBLIC .
 
-public section.
+  PUBLIC SECTION.
 
-  interfaces IF_OO_ADT_CLASSRUN .
+    INTERFACES if_oo_adt_classrun .
 
-  methods GENERATE_SINGLE
-    importing
-      !IV_NAME type SEOCLNAME
-    returning
-      value(RT_TEXT) type STRINGTAB
-    raising
-      ZCX_ABAP2MD_ERROR .
-  methods GENERATE_MULTIPLE .
+    METHODS generate_single
+      IMPORTING
+        !iv_name       TYPE seoclname
+      RETURNING
+        VALUE(rt_text) TYPE stringtab
+      RAISING
+        zcx_abap2md_error .
+    METHODS generate_multiple .
   PROTECTED SECTION.
   PRIVATE SECTION.
     DATA: mt_class_interface_info_set TYPE STANDARD TABLE OF rpyclci,
@@ -120,7 +120,7 @@ ENDCLASS.
 
 
 
-CLASS ZCL_ABAP2MD_MAIN IMPLEMENTATION.
+CLASS zcl_abap2md_main IMPLEMENTATION.
 
 
   METHOD add_message_symsg.
@@ -498,12 +498,16 @@ CLASS ZCL_ABAP2MD_MAIN IMPLEMENTATION.
 *   - class docu start
       lv_tag = '*/'.
       ev_next_tag = lv_tag.
-      FIND lv_tag IN lv_source IGNORING CASE RESULTS ls_match_result.
-      IF sy-subrc = 0. EXIT. ENDIF.
+      IF strlen( lv_source ) >= 3 AND lv_source+1(2) = lv_tag.
+        ls_match_result-offset = 1.
+        ls_match_result-length = 2.
+        EXIT.
+      ENDIF.
 
 *   - class docu end
       lv_tag = '/'.
       ev_next_tag = lv_tag.
+
 *   - at the beginnig of the line (* has been removed)
       IF lv_source(1) = lv_tag.
         ls_match_result-offset = 0.
@@ -655,14 +659,31 @@ CLASS ZCL_ABAP2MD_MAIN IMPLEMENTATION.
 
 
   METHOD if_oo_adt_classrun~main.
-    DATA: text_line TYPE string.
+    DATA: req TYPE sadt_rest_request,
+          res TYPE sadt_rest_response.
 
-    TRY.
-        DATA(text) = generate_single( 'zcl_abap2md_main' ).
-        out->write( text ).
-      CATCH zcx_abap2md_error.
-        "handle exception
-    ENDTRY.
+    req = VALUE sadt_rest_request(
+        request_line  = VALUE sadt_rest_request_line(
+        method  = |GET|
+        uri     = |/sap/bc/adt/oo/classes/zcl_abap2md_main/source/test|
+        version = |HTTP/1.1| )
+        header_fields = VALUE #( )
+        message_body  = VALUE #( )
+    ).
+
+
+    CALL FUNCTION 'SADT_REST_RFC_ENDPOINT'
+      EXPORTING
+        request  = req    " Rest Request
+      IMPORTING
+        response = res.    " Rest Request
+
+    DATA(lv_string) =    cl_bcs_convert=>xstring_to_string(
+                              iv_xstr   = res-message_body
+                              iv_cp     =  1100                " SAP character set identification
+                                      ).
+
+
   ENDMETHOD.
 
 
