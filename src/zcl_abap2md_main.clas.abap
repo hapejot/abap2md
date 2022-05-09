@@ -54,16 +54,17 @@ CLASS zcl_abap2md_main DEFINITION
            END OF exception_info.
     TYPES exception_info_t TYPE STANDARD TABLE OF exception_info WITH EMPTY KEY.
     TYPES: BEGIN OF method_info,
-             method_name     TYPE  seocpdname,
-             docu_style      TYPE  char10,
-             exposure        TYPE  seoexpose,
-             abstract        TYPE  char1,
-             redefined       TYPE  char1,
-             static          TYPE  char1,
-             description     TYPE  rswsourcet,
-             return_info     TYPE  parameter_info,
-             parameter_infos TYPE  parameter_info_t,
-             exception_infos TYPE  exception_info_t,
+             method_name     TYPE seocpdname,
+             docu_style      TYPE char10,
+             exposure        TYPE seoexpose,
+             abstract        TYPE char1,
+             redefined       TYPE char1,
+             static          TYPE char1,
+             brief           TYPE rswsourcet,
+             description     TYPE rswsourcet,
+             return_info     TYPE parameter_info,
+             parameter_infos TYPE parameter_info_t,
+             exception_infos TYPE exception_info_t,
            END OF method_info.
     TYPES method_info_t TYPE STANDARD TABLE OF method_info.
 
@@ -230,11 +231,12 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
       REFRESH lt_source.
 
 *   Create composite component name (for interface methods)
-      IF ls_method-refclsname CP 'IF*'.
+      IF ls_method-refclsname CP 'ZIF*' OR ls_method-refclsname CP 'IF*'.
         CONCATENATE ls_method-refclsname '~' ls_method-cmpname INTO lv_cpdname.
       ELSE.
         lv_cpdname = ls_method-cmpname.
       ENDIF.
+      ls_method_info-method_name = lv_cpdname.
 
 
       ls_method_info-exposure = ls_method-exposure.
@@ -252,9 +254,10 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
       ENDIF.
 
 
-*   Create method info entry
-      ls_method_info-method_name = lv_cpdname.
 
+      IF ls_method-descript IS NOT INITIAL.
+        ls_method_info-brief = VALUE #( ( CONV #( ls_method-descript ) ) ).
+      ENDIF.
 
 *   Create tag infos for parameters/returns
       LOOP AT mt_parameter_set INTO DATA(ls_parameter)
@@ -310,12 +313,7 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
       ENDIF.
 
 
-*   Append to method info table
-      IF ls_method_info-method_name <> 'CLASS_DOCU'.
-        APPEND ls_method_info TO ms_class_docu_structure-methods.
-      ELSE.
-        ms_class_docu_structure-description = ls_method_info-description.
-      ENDIF.
+      APPEND ls_method_info TO ms_class_docu_structure-methods.
 
     ENDLOOP.
 
@@ -356,14 +354,18 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
       APPEND INITIAL LINE TO rt_text.
       APPEND INITIAL LINE TO rt_text.
 
-      APPEND |{ method-method_name }| TO rt_text.
-      APPEND repeat( val = '-' occ = strlen( method-method_name ) ) TO rt_text.
+      DATA(lv_name) = |{ method-method_name }|.
+
+      APPEND lv_name TO rt_text.
+      APPEND repeat( val = '-' occ = strlen( lv_name ) ) TO rt_text.
+      write_description(    EXPORTING   i_description   = method-brief
+                            CHANGING    i_out           = rt_text ).
       APPEND INITIAL LINE TO rt_text.
-      write_description(    EXPORTING   i_description = method-description
-                            CHANGING    i_out         = rt_text ).
+      write_description(    EXPORTING   i_description   = method-description
+                            CHANGING    i_out           = rt_text ).
       APPEND INITIAL LINE TO rt_text.
-      write_out_params(     EXPORTING   i_method = method
-                            CHANGING    ct_text = rt_text ).
+      write_out_params(     EXPORTING   i_method        = method
+                            CHANGING    ct_text         = rt_text ).
 
 
     ENDLOOP.
