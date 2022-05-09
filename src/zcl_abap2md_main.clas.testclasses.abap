@@ -23,76 +23,68 @@ CLASS ltcl_main IMPLEMENTATION.
     chunk = VALUE #(
                 ( |This method collects the description until the next JavaDoc-like tag| )
                 ( |Known tag values:| )
-                ( |*EXCEPTION*, *PARAM*, *RETURN*, *THROWS* started by a leading @| )
+                ( |*@@EXCEPTION*, *@@PARAM*, *@@RETURN*, *@@THROWS*.| )
                 ( || )
                 ( || )
                 ( |@param EV_NEXT_TAG        Next/Last found tag| )
                 ( |@param EV_TAG_VALUE       Tag value| )
-                ( |@param ET_DESCRIPTION     Description found until found tag| )
+                ( |@param et_description     Description found until found tag| )
                 ( |@param CV_NEXT_INDENT     Next indent to be used| )
                 ( |@param CT_SOURCE          Source description| )
                 ( || )
+                ( |@return abap_bool *abap_true* if succesfull,| )
+                ( |                  *abap_false* otherwise| )
+                ( |@raising cx_nothing          Exception for nothing.| )
+                ( |@throws cx_something         Exception for something.| )
+                ( |@exception cx_anything       Exception for anything.| )
     ).
     cl_abap_unit_assert=>assert_equals( msg = 'msg' exp = chunk act = cut->next_chunk( ) ).
 
   ENDMETHOD.
 
   METHOD comment_parse_stg2.
-    DATA chunk01 TYPE rswsourcet.
-    DATA chunk02 TYPE rswsourcet.
-    DATA chunk03 TYPE rswsourcet.
-    DATA chunk04 TYPE rswsourcet.
-    DATA chunk05 TYPE rswsourcet.
-    DATA chunk06 TYPE rswsourcet.
-    DATA chunk07 TYPE rswsourcet.
-    DATA chunk08 TYPE rswsourcet.
-    DATA chunk09 TYPE rswsourcet.
-    DATA chunk10 TYPE rswsourcet.
-    DATA chunk11 TYPE rswsourcet.
-    DATA chunk12 TYPE rswsourcet.
+    DATA chunks TYPE STANDARD TABLE OF rswsourcet.
 
     DATA(lv_code) = get_code_fragment( ).
     DATA(cut) = CAST lif_parser( NEW lcl_tag_def_parser( NEW lcl_comment_parser( lv_code ) ) ).
-    chunk01 = VALUE #(
+    APPEND VALUE #(
                 ( |This method collects the description until the next JavaDoc-like tag| )
                 ( |Known tag values:| )
                 ( |*@EXCEPTION*, *@PARAM*, *@RETURN*, *@THROWS*.| )
                 ( || )
-                ( || ) ).
-    chunk02 = VALUE #(
-                ( |@param| ) ).
-    chunk03 = VALUE #( (  |EV_NEXT_TAG        Next/Last found tag| ) ).
-    chunk04 = VALUE #( ( |@param| ) ).
-    chunk05 = VALUE #( ( |EV_TAG_VALUE       Tag value| ) ).
-    chunk06 = VALUE #( ( |@param| ) ).
-    chunk07 = VALUE #( ( |ET_DESCRIPTION     Description found until found tag| ) ).
-    chunk08 = VALUE #( ( |@param| ) ).
-    chunk09 = VALUE #( ( |CV_NEXT_INDENT     Next indent to be used| ) ).
-    chunk10 = VALUE #( ( |@param| ) ).
-    chunk11 = VALUE #( ( |CT_SOURCE          Source description| )
-                        ( || )  ).
+                ( || ) ) TO chunks.
+    APPEND VALUE #( ( |@param| ) ) TO chunks.
+    APPEND VALUE #( (  |EV_NEXT_TAG        Next/Last found tag| ) ) TO chunks.
+    APPEND VALUE #( ( |@param| ) ) TO chunks.
+    APPEND VALUE #( ( |EV_TAG_VALUE       Tag value| ) ) TO chunks.
+    APPEND VALUE #( ( |@param| ) ) TO chunks.
+    APPEND VALUE #( ( |et_description     Description found until found tag| ) ) TO chunks.
+    APPEND VALUE #( ( |@param| ) ) TO chunks.
+    APPEND VALUE #( ( |CV_NEXT_INDENT     Next indent to be used| ) ) TO chunks.
+    APPEND VALUE #( ( |@param| ) ) TO chunks.
+    APPEND VALUE #( ( |CT_SOURCE          Source description| ) ( || )  ) TO chunks.
+    APPEND VALUE #( ( |@return| ) ) TO chunks.
+    APPEND VALUE #( ( |abap_bool *abap_true* if succesfull,| )  ( |*abap_false* otherwise| ) ) TO chunks.
+    APPEND VALUE #( ( |@raising| ) ) TO chunks.
+    APPEND VALUE #( ( |cx_nothing          Exception for nothing.| )  ) TO chunks.
+    APPEND VALUE #( ( |@throws| ) ) TO chunks.
+    APPEND VALUE #( ( |cx_something         Exception for something.| )  ) TO chunks.
+    APPEND VALUE #( ( |@exception| ) ) TO chunks.
+    APPEND VALUE #( ( |cx_anything       Exception for anything.| )  ) TO chunks.
+    APPEND VALUE #( ) TO chunks.
 
-
-    cl_abap_unit_assert=>assert_equals( msg = '1' exp = chunk01 act = cut->next_chunk( ) ).
-    cl_abap_unit_assert=>assert_equals( msg = '2' exp = chunk02 act = cut->next_chunk( ) ).
-    cl_abap_unit_assert=>assert_equals( msg = '3' exp = chunk03 act = cut->next_chunk( ) ).
-    cl_abap_unit_assert=>assert_equals( msg = '4' exp = chunk04 act = cut->next_chunk( ) ).
-    cl_abap_unit_assert=>assert_equals( msg = '5' exp = chunk05 act = cut->next_chunk( ) ).
-    cl_abap_unit_assert=>assert_equals( msg = '6' exp = chunk06 act = cut->next_chunk( ) ).
-    cl_abap_unit_assert=>assert_equals( msg = '7' exp = chunk07 act = cut->next_chunk( ) ).
-    cl_abap_unit_assert=>assert_equals( msg = '8' exp = chunk08 act = cut->next_chunk( ) ).
-    cl_abap_unit_assert=>assert_equals( msg = '9' exp = chunk09 act = cut->next_chunk( ) ).
-    cl_abap_unit_assert=>assert_equals( msg = '10' exp = chunk10 act = cut->next_chunk( ) ).
-    cl_abap_unit_assert=>assert_equals( msg = '11' exp = chunk11 act = cut->next_chunk( ) ).
+    LOOP AT chunks INTO DATA(chunk).
+      cl_abap_unit_assert=>assert_equals( msg = |{ sy-tabix }| exp = chunk act = cut->next_chunk( ) ).
+    ENDLOOP.
 
   ENDMETHOD.
 
   METHOD comment_parsing.
-    DATA: ls_meth TYPE zcl_abap2md_main=>crms_method_info.
+    DATA: ls_meth TYPE zcl_abap2md_main=>method_info.
     DATA(cut) = NEW zcl_abap2md_main( ).
 
     ls_meth-description = get_code_fragment( ).
-    cut->parse_docu_jd(
+    cut->parse_method_docu(
       CHANGING
         cs_method_info = ls_meth
     ).
@@ -100,10 +92,45 @@ CLASS ltcl_main IMPLEMENTATION.
     lt_desc = VALUE #(
                 ( |This method collects the description until the next JavaDoc-like tag| )
                 ( |Known tag values:| )
-                ( |*EXCEPTION*, *PARAM*, *RETURN*, *THROWS* started by a leading @| )
-
+                ( |*@EXCEPTION*, *@PARAM*, *@RETURN*, *@THROWS*.| )
+                ( || )
+                ( || )
      ).
     cl_abap_unit_assert=>assert_equals( msg = 'msg' exp = lt_desc act = ls_meth-description ).
+    cl_abap_unit_assert=>assert_equals( msg = 'params' exp = 5 act = lines( ls_meth-parameter_infos ) ).
+
+    DATA(param) = ls_meth-parameter_infos[ parameter_name = 'EV_NEXT_TAG' ].
+    DATA exp LIKE param-description.
+    exp = VALUE #( ( |Next/Last found tag| ) ).
+    cl_abap_unit_assert=>assert_equals( msg = 'param1' exp = exp  act = param-description ).
+
+    param = ls_meth-parameter_infos[ parameter_name = 'EV_TAG_VALUE' ].
+    exp = VALUE #( ( |Tag value| ) ).
+    cl_abap_unit_assert=>assert_equals( msg = 'param2' exp = exp  act = param-description ).
+
+    param = ls_meth-parameter_infos[ parameter_name = 'ET_DESCRIPTION' ].
+    exp = VALUE #( ( |Description found until found tag| ) ).
+    cl_abap_unit_assert=>assert_equals( msg = 'param3' exp = exp  act = param-description ).
+
+    param = ls_meth-parameter_infos[ parameter_name = 'CV_NEXT_INDENT' ].
+    exp = VALUE #( ( |Next indent to be used| ) ).
+    cl_abap_unit_assert=>assert_equals( msg = 'param4' exp = exp  act = param-description ).
+
+    param = ls_meth-parameter_infos[ parameter_name = 'CT_SOURCE' ].
+    exp = VALUE #( ( |Source description| )  ( || ) ).
+    cl_abap_unit_assert=>assert_equals( msg = 'param5' exp = exp  act = param-description ).
+
+    exp = VALUE #(  ( |abap_bool *abap_true* if succesfull,| )
+                    ( |*abap_false* otherwise| ) ).
+    cl_abap_unit_assert=>assert_equals( msg = 'returns' exp = exp  act = ls_meth-return_info-description ).
+
+    cl_abap_unit_assert=>assert_equals( msg = 'exceptions' exp = 3 act = lines( ls_meth-exception_infos ) ).
+
+    DATA(exc) = ls_meth-exception_infos[ exception_name = 'CX_NOTHING' ].
+    exp = VALUE #( ( |Exception for nothing.| ) ).
+    cl_abap_unit_assert=>assert_equals( msg = 'cx_nothing' exp = exp act = exc-description ).
+
+
   ENDMETHOD.
 
   METHOD get_code_fragment.
@@ -113,15 +140,20 @@ CLASS ltcl_main IMPLEMENTATION.
                 ( |**/| )
                 ( |* This method collects the description until the next JavaDoc-like tag| )
                 ( |* Known tag values:| )
-                ( |* *EXCEPTION*, *PARAM*, *RETURN*, *THROWS* started by a leading @| )
+                ( |* *@@EXCEPTION*, *@@PARAM*, *@@RETURN*, *@@THROWS*.| )
                 ( |*| )
                 ( |*| )
                 ( |* @param EV_NEXT_TAG        Next/Last found tag| )
                 ( |* @param EV_TAG_VALUE       Tag value| )
-                ( |* @param ET_DESCRIPTION     Description found until found tag| )
+                ( |* @param et_description     Description found until found tag| )
                 ( |* @param CV_NEXT_INDENT     Next indent to be used| )
                 ( |* @param CT_SOURCE          Source description| )
                 ( |*| )
+                ( |* @return abap_bool *abap_true* if succesfull,| )
+                ( |*                   *abap_false* otherwise| )
+                ( |* @raising cx_nothing          Exception for nothing.| )
+                ( |* @throws cx_something         Exception for something.| )
+                ( |* @exception cx_anything       Exception for anything.| )
                 ( |*/| )
                 ( || )
                 ( || )

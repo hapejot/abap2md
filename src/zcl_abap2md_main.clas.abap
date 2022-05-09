@@ -2,9 +2,15 @@ CLASS zcl_abap2md_main DEFINITION
   PUBLIC
   FINAL
   CREATE PUBLIC .
+**/
+* This class extracts documentation from source code of other classes.
+* this source code has to be documented in a special fashion.
+* Also the standard document strings of the SE24 are included for documentation.
+*
+*
+*/
 
   PUBLIC SECTION.
-
     INTERFACES if_oo_adt_classrun .
 
     METHODS generate_single
@@ -27,95 +33,93 @@ CLASS zcl_abap2md_main DEFINITION
           mt_method_include_set       TYPE seop_methods_w_include,
           mt_sub_class_set            TYPE STANDARD TABLE OF vseoclif,
           mt_redefinition_set         TYPE seor_redefinitions_r.
-    TYPES: BEGIN OF crms_class_descr,
-             class_name  TYPE seoclsname,
-             description TYPE seodescr,
-           END OF crms_class_descr.
-    TYPES crmt_class_descr TYPE STANDARD TABLE OF crms_class_descr.
+    TYPES: BEGIN OF class_descr,
+             class_name TYPE seoclsname,
+             brief      TYPE string,
+           END OF class_descr.
+    TYPES class_descr_t TYPE STANDARD TABLE OF class_descr.
 
-    TYPES: BEGIN OF crms_parameter_info,
+    TYPES: BEGIN OF parameter_info,
              parameter_name TYPE seocmpname,
              direction      TYPE char20,
              typ_type       TYPE seotyptype,
              data_type      TYPE rs38l_typ,
-             descr_found    TYPE abap_bool,
              description    TYPE rswsourcet,
-           END OF crms_parameter_info.
-    TYPES crmt_parameter_info TYPE STANDARD TABLE OF crms_parameter_info WITH EMPTY KEY.
-    TYPES: BEGIN OF crms_exception_info,
+           END OF parameter_info.
+    TYPES parameter_info_t TYPE STANDARD TABLE OF parameter_info WITH EMPTY KEY.
+    TYPES: BEGIN OF exception_info,
              exception_name TYPE seoclsname,
              data_type      TYPE rs38l_typ,
-             descr_found    TYPE abap_bool,
              description    TYPE rswsourcet,
-           END OF crms_exception_info.
-    TYPES crmt_exception_info TYPE STANDARD TABLE OF crms_exception_info WITH EMPTY KEY.
-    TYPES: BEGIN OF crms_method_info,
+           END OF exception_info.
+    TYPES exception_info_t TYPE STANDARD TABLE OF exception_info WITH EMPTY KEY.
+    TYPES: BEGIN OF method_info,
              method_name     TYPE  seocpdname,
              docu_style      TYPE  char10,
              exposure        TYPE  seoexpose,
              abstract        TYPE  char1,
              redefined       TYPE  char1,
              static          TYPE  char1,
-             descr_found     TYPE  abap_bool,
              description     TYPE  rswsourcet,
-             return_info     TYPE  crms_parameter_info,
-             parameter_infos TYPE  crmt_parameter_info,
-             exception_infos TYPE  crmt_exception_info,
-           END OF crms_method_info.
-    TYPES crmt_method_info TYPE STANDARD TABLE OF crms_method_info.
+             return_info     TYPE  parameter_info,
+             parameter_infos TYPE  parameter_info_t,
+             exception_infos TYPE  exception_info_t,
+           END OF method_info.
+    TYPES method_info_t TYPE STANDARD TABLE OF method_info.
 
     DATA: BEGIN OF ms_class_docu_structure,
             class_name     TYPE seoclsname,
             exposure       TYPE seoexpose,
-            super_class    TYPE crms_class_descr,
-            interfaces     TYPE crmt_class_descr,
-            friend_classes TYPE crmt_class_descr,
-            sub_classes    TYPE crmt_class_descr,
-            methods        TYPE crmt_method_info,
+            super_class    TYPE class_descr,
+            interfaces     TYPE class_descr_t,
+            friend_classes TYPE class_descr_t,
+            sub_classes    TYPE class_descr_t,
+            methods        TYPE method_info_t,
             descr_found    TYPE crmt_boolean,
+            brief          TYPE rswsourcet,
             description    TYPE rswsourcet,
-          END OF ms_class_docu_structure.
+          END OF ms_class_docu_structure,
+          mv_class_include TYPE programm.
 
     METHODS read_class_info
       IMPORTING
         iv_class_name TYPE seoclname
       RAISING
         zcx_abap2md_error.
-    METHODS parse_docu_jd
+    METHODS parse_method_docu
       CHANGING
-        cs_method_info TYPE zcl_abap2md_main=>crms_method_info.
-    METHODS parse_docu_xml
-      CHANGING
-        cs_method_info TYPE zcl_abap2md_main=>crms_method_info.
+        cs_method_info TYPE zcl_abap2md_main=>method_info.
+
     METHODS build_class_docu_structure.
     METHODS build_class_info.
     METHODS build_method_info.
     METHODS add_message_symsg.
-    METHODS find_next_jd_tag
-      EXPORTING
-        ev_next_tag    TYPE char20
-        ev_tag_value   TYPE name_komp
-        et_description TYPE rswsourcet
-      CHANGING
-        ct_source      TYPE rswsourcet
-        cv_next_indent TYPE i.
+
     METHODS write_description
-      IMPORTING i_description TYPE zcl_abap2md_main=>crms_parameter_info-description
+      IMPORTING i_description TYPE zcl_abap2md_main=>parameter_info-description
       CHANGING  i_out         TYPE stringtab.
     METHODS write_definition
-      IMPORTING i_description TYPE zcl_abap2md_main=>crms_parameter_info-description
+      IMPORTING i_description TYPE zcl_abap2md_main=>parameter_info-description
       CHANGING  i_out         TYPE stringtab.
     METHODS write_out_params
       IMPORTING
-        i_method TYPE zcl_abap2md_main=>crms_method_info
+        i_method TYPE zcl_abap2md_main=>method_info
       CHANGING
         ct_text  TYPE stringtab.
     METHODS write_out_param_dir
       IMPORTING
-        i_method TYPE zcl_abap2md_main=>crms_method_info
-        iv_dir   TYPE zcl_abap2md_main=>crms_parameter_info-direction
+        i_method TYPE zcl_abap2md_main=>method_info
+        iv_dir   TYPE zcl_abap2md_main=>parameter_info-direction
       CHANGING
         ct_text  TYPE stringtab.
+    METHODS extract_word
+      CHANGING
+        text            TYPE rswsourcet
+      RETURNING
+        VALUE(r_result) TYPE string.
+    METHODS parse_class_docu
+      IMPORTING
+        i_source TYPE rswsourcet.
 ENDCLASS.
 
 
@@ -148,28 +152,20 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
 
 
   METHOD build_class_info.
-    DATA: ls_class_descr TYPE crms_class_descr.
 **/
-* This method builds the class header info
+* Building the class header info.
 *
 */
+    DATA: lt_source               TYPE rswsourcet,
+          ls_class_descr          TYPE class_descr,
+          ls_class_interface_info TYPE rpyclci.
 
+    ls_class_interface_info = mt_class_interface_info_set[ 1 ].
 
-
-
-* Get class interface info
-    READ TABLE mt_class_interface_info_set INTO DATA(ls_class_interface_info) INDEX 1.
-
-
-* Set class name
     ms_class_docu_structure-class_name = ls_class_interface_info-clsname.
 
+    ms_class_docu_structure-brief = VALUE #( ( CONV #( ls_class_interface_info-descript ) ) ).
 
-* Set default description
-    APPEND ls_class_interface_info-descript TO ms_class_docu_structure-description.
-
-
-* Set exposure
     ms_class_docu_structure-exposure = ls_class_interface_info-exposure.
 
 
@@ -177,7 +173,7 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
     READ TABLE mt_meta_relation_set
       INTO DATA(ls_meta_relation)
       WITH KEY reltype = '2'.
-    ms_class_docu_structure-super_class = ls_meta_relation-refclsname.
+    ms_class_docu_structure-super_class = VALUE #( class_name = ls_meta_relation-refclsname ) .
 
 
 * Interfaces
@@ -204,6 +200,9 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
     ENDLOOP.
 
 
+    READ REPORT mv_class_include INTO lt_source.
+
+    parse_class_docu( lt_source ).
 
   ENDMETHOD.
 
@@ -214,12 +213,11 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
 *
 */
 
-
     DATA lt_source            TYPE rswsourcet.
     DATA lv_source            TYPE string.
-    DATA ls_parameter_info    TYPE crms_parameter_info.
-    DATA ls_exception_info    TYPE crms_exception_info.
-    DATA ls_method_info       TYPE crms_method_info.
+    DATA ls_parameter_info    TYPE parameter_info.
+    DATA ls_exception_info    TYPE exception_info.
+    DATA ls_method_info       TYPE method_info.
     DATA lv_cpdname           TYPE seocpdname.
     DATA lv_coding_started    TYPE abap_bool.
     DATA lv_c1                TYPE c.
@@ -239,24 +237,17 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
       ENDIF.
 
 
-*   Exposure
       ls_method_info-exposure = ls_method-exposure.
-
-*   Redefined
       ls_method_info-redefined = ls_method-redefin.
 
-*   Static
       IF ls_method-mtddecltyp = '1'.
         ls_method_info-static = abap_true.
       ENDIF.
 
-
-*   Get include name
-      READ TABLE mt_method_include_set INTO DATA(ls_method_include)
-        WITH KEY cpdkey-cpdname = lv_cpdname.
+      DATA(ls_method_include)  = VALUE #( mt_method_include_set[ cpdkey-cpdname = lv_cpdname ] OPTIONAL ).
 
 *   No method include -> abstract
-      IF sy-subrc IS NOT INITIAL.
+      IF ls_method_include IS INITIAL.
         ls_method_info-abstract = abap_true.
       ENDIF.
 
@@ -267,7 +258,7 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
 
 *   Create tag infos for parameters/returns
       LOOP AT mt_parameter_set INTO DATA(ls_parameter)
-        WHERE cmpname = ls_method-cmpname.
+                WHERE cmpname = ls_method-cmpname.
 
 *     Add tag per parameter
         CLEAR ls_parameter_info.
@@ -312,71 +303,10 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
       ENDIF.
 
 
-*   Collect all comments until method statement
-      CLEAR lv_coding_started.
-      LOOP AT lt_source INTO lv_source.
-
-*     Collect header comments
-        lv_c1 = lv_source.
-        IF lv_c1 = '*'.
-
-*       Check style
-          IF ls_method_info-docu_style IS INITIAL OR ls_method_info-docu_style = 'UNKNOWN'.
-
-*         XML-like
-            IF lv_source CS '<CLASS_DOCU>' OR lv_source CS '<METHOD_DOCU>'.
-              ls_method_info-docu_style = 'XML'.
-              REFRESH ls_method_info-description.   "delete already collected docu
-*         JD-like
-            ELSEIF lv_source CS '*/' OR lv_source CS '@PARAM' OR lv_source CS '@RETURN'.
-              ls_method_info-docu_style = 'JD'.
-              REFRESH ls_method_info-description.   "delete already collected docu
-            ELSE.
-              ls_method_info-docu_style = 'UNKNOWN'.
-            ENDIF.
-
-          ENDIF.
-
-*       Do only collect comments when coding has not started yet or former XML style
-          CHECK lv_coding_started = abap_false OR ls_method_info-docu_style = 'XML'.
-
-*       Remove comment tag
-          SHIFT lv_source BY 1 PLACES.
-
-*       Append to description table
-          IF lv_source IS NOT INITIAL.
-            APPEND lv_source TO ls_method_info-description.
-          ENDIF.
-
-*     Exit when coding starts
-        ELSEIF lv_source CS 'METHOD'.
-
-*          lv_coding_started = abap_true.
-
-        ELSE.
-*       Exit if documentation has been found
-          EXIT.
-
-        ENDIF.
-
-
-      ENDLOOP.
-
 *   Parse docu
       IF lt_source IS NOT INITIAL.
-*     - XML
-        IF ls_method_info-docu_style = 'XML'.
-          parse_docu_xml( CHANGING cs_method_info = ls_method_info ).
-*     - JD
-        ELSEIF ls_method_info-docu_style = 'JD'.
-          parse_docu_jd( CHANGING cs_method_info = ls_method_info ).
-*     - Unknown
-        ELSEIF ls_method_info-docu_style = 'UNKNOWN'.
-          "... do nothing
-*     - not commented, take the method description
-        ELSE.
-          APPEND ls_method-descript TO ls_method_info-description.
-        ENDIF.
+        ls_method_info-description = lt_source.
+        parse_method_docu( CHANGING cs_method_info = ls_method_info ).
       ENDIF.
 
 
@@ -384,234 +314,21 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
       IF ls_method_info-method_name <> 'CLASS_DOCU'.
         APPEND ls_method_info TO ms_class_docu_structure-methods.
       ELSE.
-        IF ls_method_info-descr_found = abap_true.
-          ms_class_docu_structure-description = ls_method_info-description.
-          ms_class_docu_structure-descr_found = abap_true.
-        ENDIF.
+        ms_class_docu_structure-description = ls_method_info-description.
       ENDIF.
-
-
-*   Raise warning message for missing docu
-*   - method docu
-      IF ls_method_info-descr_found = abap_false.
-*     ... but not for abstract methods
-        IF ls_method_info-abstract = abap_false.
-*       Raise message
-          MESSAGE i113(crm_mktgs_docugen) WITH ms_class_docu_structure-class_name ls_method_info-method_name INTO DATA(mv_message_text).
-          add_message_symsg( ).
-        ENDIF.
-*   - check parameter only if method docu exists
-      ELSE.
-*     - return docu
-        IF ls_method_info-return_info-parameter_name IS NOT INITIAL AND
-           ls_method_info-return_info-descr_found    = abap_false.
-*       Raise message
-          MESSAGE i110(crm_mktgs_docugen) WITH
-              ms_class_docu_structure-class_name
-              ls_method_info-method_name
-              ls_method_info-return_info-parameter_name
-            INTO mv_message_text.
-          add_message_symsg( ).
-        ENDIF.
-*     - parameter docu
-        LOOP AT ls_method_info-parameter_infos INTO ls_parameter_info WHERE descr_found = abap_false.
-*       Raise message
-          MESSAGE i111(crm_mktgs_docugen) WITH
-              ms_class_docu_structure-class_name
-              ls_method_info-method_name
-              ls_parameter_info-parameter_name
-            INTO mv_message_text.
-          add_message_symsg( ).
-        ENDLOOP.
-*     - exception docu
-        LOOP AT ls_method_info-exception_infos INTO ls_exception_info WHERE descr_found = abap_false.
-*       Raise message
-          MESSAGE i112(crm_mktgs_docugen) WITH
-              ms_class_docu_structure-class_name
-              ls_method_info-method_name
-              ls_exception_info-exception_name
-            INTO mv_message_text.
-          add_message_symsg( ).
-        ENDLOOP.
-      ENDIF.
-
 
     ENDLOOP.
-
 
 * Raise message for missing class description
     IF ms_class_docu_structure-descr_found = abap_false.
 *   Raise message
-      MESSAGE i114(crm_mktgs_docugen) WITH ms_class_docu_structure-class_name INTO mv_message_text.
       add_message_symsg( ).
     ENDIF.
 
-
-
   ENDMETHOD.
 
 
-  METHOD find_next_jd_tag.
-**/
-* This method collects the description until the next JavaDoc-like tag
-* Known tag values:
-* *EXCEPTION*, *PARAM*, *RETURN*, *THROWS* started by a leading @
-*
-*
-* @param EV_NEXT_TAG        Next/Last found tag
-* @param EV_TAG_VALUE       Tag value
-* @param ET_DESCRIPTION     Description found until found tag
-* @param CV_NEXT_INDENT     Next indent to be used
-* @param CT_SOURCE          Source description
-*
-*/
 
-
-    DATA lt_source            TYPE rswsourcet.
-    DATA lv_source            TYPE string.
-    DATA lv_source_tmp        TYPE string.
-    DATA lv_source_before     TYPE string.
-    DATA lv_source_after      TYPE string.
-    DATA lv_current_tag       TYPE char20.
-    DATA lv_tag               TYPE char20.
-    DATA lv_tag_alt           TYPE char20.
-    DATA ls_match_result      TYPE match_result.
-    DATA lv_shift             TYPE i.
-    DATA lv_length            TYPE i.
-    DATA lv_length_tmp        TYPE i.
-    DATA lv_no_spaces         TYPE i.
-
-    FIELD-SYMBOLS <fv_source> TYPE string.
-
-
-* Initialize exporting parameter
-    REFRESH et_description.
-    CLEAR: ev_next_tag.
-
-* Get source
-    lt_source = ct_source.
-
-* Scan for tags
-    LOOP AT lt_source INTO lv_source.
-
-*   Check for jd tag
-*   - class docu start
-      lv_tag = '*/'.
-      ev_next_tag = lv_tag.
-      IF strlen( lv_source ) >= 3 AND lv_source+1(2) = lv_tag.
-        ls_match_result-offset = 1.
-        ls_match_result-length = 2.
-        EXIT.
-      ENDIF.
-
-*   - class docu end
-      lv_tag = '/'.
-      ev_next_tag = lv_tag.
-
-*   - at the beginnig of the line (* has been removed)
-      IF lv_source(1) = lv_tag.
-        ls_match_result-offset = 0.
-        ls_match_result-length = 1.
-        EXIT.
-      ENDIF.
-*   - in the middle of the line (with *)
-      CONCATENATE '*' lv_tag INTO lv_tag.
-      FIND lv_tag IN lv_source IGNORING CASE RESULTS ls_match_result.
-      IF sy-subrc = 0. EXIT. ENDIF.
-
-*   - return
-      lv_tag = '@RETURN'.
-      ev_next_tag = lv_tag.
-      FIND lv_tag IN lv_source IGNORING CASE RESULTS ls_match_result.
-      IF sy-subrc = 0. EXIT. ENDIF.
-
-*   - param
-      lv_tag = '@PARAM'.
-      ev_next_tag = lv_tag.
-      FIND lv_tag IN lv_source IGNORING CASE RESULTS ls_match_result.
-      IF sy-subrc = 0. EXIT. ENDIF.
-
-*   - exception
-      lv_tag = '@EXCEPTION'.
-      ev_next_tag = lv_tag.
-      FIND lv_tag IN lv_source IGNORING CASE RESULTS ls_match_result.
-      IF sy-subrc = 0. EXIT. ENDIF.
-
-*   - throws
-      lv_tag = '@THROWS'.
-      ev_next_tag = lv_tag.
-      FIND lv_tag IN lv_source IGNORING CASE RESULTS ls_match_result.
-      IF sy-subrc = 0. EXIT. ENDIF.
-
-
-*   Remove leading spaces
-      IF sy-tabix = 1.
-        CONDENSE lv_source .
-      ELSE.
-*     Consider indent starting with second line
-        lv_source_tmp = lv_source.
-        CONDENSE lv_source_tmp.
-        lv_length_tmp = strlen( lv_source_tmp ).
-        lv_length     = strlen( lv_source ) - cv_next_indent.
-        IF lv_length_tmp < lv_length.
-          SHIFT lv_source BY cv_next_indent PLACES.
-        ELSE.
-          cv_next_indent = strlen( lv_source ) - lv_length_tmp.
-          lv_source = lv_source_tmp.
-        ENDIF.
-      ENDIF.
-
-
-*   Append description
-      APPEND lv_source TO et_description.
-
-
-*   Remove line from source
-      DELETE ct_source INDEX 1.
-
-
-    ENDLOOP.
-
-
-* Get current line
-    READ TABLE ct_source ASSIGNING <fv_source> INDEX 1.
-    IF <fv_source> IS ASSIGNED.
-* Get length
-      lv_length = strlen( <fv_source> ).
-
-* Check result
-      lv_source_before = <fv_source>(ls_match_result-offset).
-      lv_shift = ls_match_result-offset + ls_match_result-length.
-      SHIFT <fv_source> BY lv_shift PLACES.
-
-* Check if tag value needs to be processed
-      IF ev_next_tag = '@PARAM' OR ev_next_tag = '@EXCEPTION' OR ev_next_tag = '@THROWS'.
-
-*   Get tag value
-        CONDENSE <fv_source>.
-        SPLIT <fv_source> AT space INTO ev_tag_value <fv_source>.
-        CONDENSE ev_tag_value.
-
-      ENDIF.
-
-* Calculate next indent
-      cv_next_indent = lv_length - strlen( <fv_source> ).
-* Add source before to description
-      lv_source_tmp = lv_source_before.
-      CONDENSE lv_source_tmp.
-      IF lv_source_tmp IS NOT INITIAL.
-        APPEND lv_source_before TO et_description.
-      ENDIF.
-
-* Delete source line if empty
-      IF <fv_source> IS INITIAL.
-        DELETE ct_source INDEX 1.
-      ENDIF.
-
-    ENDIF.
-
-
-  ENDMETHOD.
 
 
   METHOD generate_multiple.
@@ -623,16 +340,14 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
 * @param iv_name is the class name of the class to be documented. This name can be in lower case.
 * @return a string table containing the raw mark down description of the class.
 */
-    DATA: text_line TYPE string.
-
     read_class_info( iv_name ).
 
     build_class_docu_structure( ).
     APPEND |NAME| TO rt_text.
     APPEND |====| TO rt_text.
 
-    APPEND |{ ms_class_docu_structure-class_name } - |  TO rt_text.
-
+    APPEND |{ ms_class_docu_structure-class_name } - { VALUE #( ms_class_docu_structure-brief[ 1 ] OPTIONAL ) } |  TO rt_text.
+    APPEND INITIAL LINE TO rt_text.
     write_description(    EXPORTING i_description = ms_class_docu_structure-description
                           CHANGING i_out         = rt_text ).
 
@@ -687,147 +402,90 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD parse_docu_jd.
+  METHOD parse_method_docu.
 **/
-* This method parses the comments using JavaDoc-like tags
+* This method parses the comments using doxygen like tags.
 *
 * @param CS_METHOD_INFO   Method info structure
 *
 */
 
 
-    DATA ls_parameter_info              TYPE crms_parameter_info.
-    DATA ls_exception_info              TYPE crms_exception_info.
-    DATA lt_source                      TYPE rswsourcet.
-    DATA lt_description                 TYPE rswsourcet.
-    DATA lv_source                      TYPE string.
-    DATA lv_tag_type                    TYPE char20.
-    DATA lv_current_tag                 TYPE char20.
+    DATA ls_parameter_info              TYPE parameter_info.
+    DATA ls_exception_info              TYPE exception_info.
     DATA lv_tag_value                   TYPE name_komp.
-    DATA lv_finished                    TYPE abap_bool.
-    DATA lv_next_indent                 TYPE i.
-    DATA ls_message                     TYPE bapiret2.
-    DATA: mv_message_text TYPE string.
-
-    FIELD-SYMBOLS <fs_parameter_info>     TYPE crms_parameter_info.
-    FIELD-SYMBOLS <fs_exception_info>     TYPE crms_exception_info.
+    FIELD-SYMBOLS <fs_parameter_info>     TYPE parameter_info.
+    FIELD-SYMBOLS <fs_exception_info>     TYPE exception_info.
     FIELD-SYMBOLS <ft_description>  TYPE rswsourcet.
 
+    DATA(tokens) = CAST lif_parser( NEW lcl_tag_def_parser( NEW lcl_comment_parser( cs_method_info-description ) ) ).
 
-* Get method raw header docu
-    lt_source = cs_method_info-description.
-    REFRESH cs_method_info-description.
+    CLEAR cs_method_info-description[].
 
 * Scan for tags
-    WHILE lv_finished = abap_false.
+    DO.
 
-*   Get next tag
-      find_next_jd_tag( IMPORTING ev_next_tag    = lv_current_tag
-                                  ev_tag_value   = lv_tag_value
-                                  et_description = lt_description
-                        CHANGING  ct_source      = lt_source
-                                  cv_next_indent = lv_next_indent ).
-
-*   Add description to formerly selected tag
-      IF <ft_description> IS ASSIGNED.
-        APPEND LINES OF lt_description TO <ft_description>.
+      DATA(chunk) = tokens->next_chunk( ).
+      IF chunk IS INITIAL.
+        EXIT.
       ENDIF.
 
 *   Find tag info entry
       UNASSIGN: <fs_parameter_info>, <fs_exception_info>, <ft_description>.
-      TRANSLATE lv_current_tag TO UPPER CASE.            "#EC TRANSLANG
-      TRANSLATE lv_tag_value   TO UPPER CASE.            "#EC TRANSLANG
-      CASE lv_current_tag.
 
-*     Method docu start
-        WHEN '*/'.
-
-*       Get description table
-          ASSIGN COMPONENT 'DESCRIPTION' OF STRUCTURE cs_method_info              TO <ft_description>.
-          cs_method_info-descr_found = abap_true.
-
-
-*     Method docu start
-        WHEN '/'.
-
-*       Exit loop
-          lv_finished = abap_true.
-
+      CASE to_upper( chunk[ 1 ] ).
 
 *     Returning docu
         WHEN '@RETURN'.
-
-*       Get description table
-          ASSIGN COMPONENT 'DESCRIPTION' OF STRUCTURE cs_method_info-return_info  TO <ft_description>.
-          cs_method_info-return_info-descr_found = abap_true.
-
+          cs_method_info-return_info-description = tokens->next_chunk( ).
 
 *     Parameter docu
         WHEN '@PARAM'.
-
+          chunk = tokens->next_chunk( ).
+          lv_tag_value = to_upper( extract_word( CHANGING text = chunk ) ).
 *       Get parameter info
-          READ TABLE cs_method_info-parameter_infos ASSIGNING <fs_parameter_info> WITH KEY parameter_name = lv_tag_value.
-
-*       Not found
+          READ TABLE cs_method_info-parameter_infos ASSIGNING <fs_parameter_info>
+                WITH KEY parameter_name = lv_tag_value.
           IF sy-subrc IS NOT INITIAL.
-
-*         Create new entry if not found
             CLEAR ls_parameter_info.
             ls_parameter_info-parameter_name = lv_tag_value.
             ls_parameter_info-direction      = 'UNKNOWN'.
-            APPEND ls_parameter_info TO cs_method_info-parameter_infos.
-            READ TABLE cs_method_info-parameter_infos ASSIGNING <fs_parameter_info> WITH KEY parameter_name = lv_tag_value.
-
-*         Raise message
-            MESSAGE w101(crm_mktgs_docugen) WITH ms_class_docu_structure-class_name cs_method_info-method_name lv_tag_value INTO mv_message_text.
+            APPEND ls_parameter_info TO cs_method_info-parameter_infos ASSIGNING <fs_parameter_info>.
             add_message_symsg( ).
-
           ENDIF.
 
-*       Get description table
-          ASSIGN COMPONENT 'DESCRIPTION' OF STRUCTURE <fs_parameter_info> TO <ft_description>.
-          <fs_parameter_info>-descr_found = abap_true.
-
+          <fs_parameter_info>-description = chunk.
 
 *     Exception docu
-        WHEN '@EXCEPTION' OR '@THROWS'.
+        WHEN '@EXCEPTION' OR '@THROWS' OR '@RAISING'.
+          chunk = tokens->next_chunk( ).
+          lv_tag_value = to_upper( extract_word( CHANGING text = chunk ) ).
 
-*       Get exception info
-          READ TABLE cs_method_info-exception_infos ASSIGNING <fs_exception_info> WITH KEY exception_name = lv_tag_value.
+          READ TABLE cs_method_info-exception_infos ASSIGNING <fs_exception_info>
+                    WITH KEY exception_name = lv_tag_value.
 
-*       Not found
           IF sy-subrc IS NOT INITIAL.
-
-*         Create new entry if not found
             CLEAR ls_exception_info.
             ls_exception_info-exception_name = lv_tag_value.
-            APPEND ls_exception_info TO cs_method_info-exception_infos.
-            READ TABLE cs_method_info-exception_infos ASSIGNING <fs_exception_info> WITH KEY exception_name = lv_tag_value.
-
-*         Raise message
-            MESSAGE w102(crm_mktgs_docugen) WITH ms_class_docu_structure-class_name cs_method_info-method_name lv_tag_value INTO mv_message_text.
+            APPEND ls_exception_info TO cs_method_info-exception_infos ASSIGNING <fs_exception_info>.
             add_message_symsg( ).
-
           ENDIF.
 
-*       Get description table
-          ASSIGN COMPONENT 'DESCRIPTION' OF STRUCTURE <fs_exception_info> TO <ft_description>.
-          <fs_exception_info>-descr_found = abap_true.
+          <fs_exception_info>-description = chunk.
 
-
+        WHEN OTHERS.
+          IF cs_method_info-description IS INITIAL.
+            cs_method_info-description = chunk.
+          ENDIF.
       ENDCASE.
 
-
-    ENDWHILE.
-
+    ENDDO.
 
 
   ENDMETHOD.
 
 
-  METHOD parse_docu_xml.
 
-  ENDMETHOD.
 
 
   METHOD read_class_info.
@@ -887,6 +545,7 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
 * Read general class infos
     REFRESH lt_class_interface_ids.
     ls_class_interface_id-clsname = to_upper( iv_class_name ).
+
     APPEND ls_class_interface_id TO lt_class_interface_ids.
 
     CALL FUNCTION 'RPY_CLIF_MULTI_READ'
@@ -905,7 +564,7 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
 
 * Read method includes
     mt_method_include_set = lr_clsref->get_all_method_includes( ).
-
+    mv_class_include = lr_clsref->public_section.
 
 * Read sub classes
     APPEND to_upper( iv_class_name ) TO lt_clskeys.
@@ -1119,8 +778,13 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
 
 
   METHOD write_out_params.
-    DATA: par    TYPE zcl_abap2md_main=>crms_parameter_info,
-          lv_dir TYPE zcl_abap2md_main=>crms_parameter_info-direction.
+**/
+* writes all parameter definitions first and then all the descriptions to
+* the output text.
+* @param ct_text output is appended to this.
+* @param i_method info structure describing the method.
+*/
+    DATA: par    TYPE zcl_abap2md_main=>parameter_info.
 
 
     write_out_param_dir(  EXPORTING
@@ -1145,11 +809,12 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
                             ct_text = ct_text ).
     IF i_method-return_info IS NOT INITIAL.
       APPEND |    RETURNING| TO ct_text.
-      APPEND |        VALUE({ i_method-return_info-parameter_name WIDTH = 35 }) TYPE { i_method-return_info-data_type }| TO ct_text.
+      DATA(val_str) = |VALUE({ i_method-return_info-parameter_name })|.
+      APPEND |        { val_str  WIDTH = 35 } TYPE { i_method-return_info-data_type }| TO ct_text.
     ENDIF.
 
     LOOP AT i_method-parameter_infos INTO par.
-      IF par-descr_found = abap_true.
+      IF par-description IS NOT INITIAL.
         APPEND INITIAL LINE TO ct_text.
         APPEND |**{ par-parameter_name }**|  TO ct_text.
         write_definition(     EXPORTING i_description = par-description
@@ -1157,19 +822,29 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
       ENDIF.
     ENDLOOP.
 
-    IF i_method-return_info IS NOT INITIAL AND i_method-return_info-descr_found = abap_true.
+    IF i_method-return_info-description IS NOT INITIAL.
       APPEND INITIAL LINE TO ct_text.
       APPEND |**{ i_method-return_info-parameter_name }**| TO ct_text.
       write_definition(     EXPORTING i_description = i_method-return_info-description
                             CHANGING i_out         = ct_text ).
     ENDIF.
 
+    LOOP AT i_method-exception_infos INTO DATA(exc).
+      IF exc-description IS NOT INITIAL.
+        APPEND INITIAL LINE TO ct_text.
+        APPEND |**{ exc-exception_name }**| TO ct_text.
+        write_definition(   EXPORTING   i_description   = exc-description
+                            CHANGING    i_out           = ct_text ).
+      ENDIF.
+    ENDLOOP.
+
+
   ENDMETHOD.
 
 
   METHOD write_out_param_dir.
 
-    DATA par TYPE zcl_abap2md_main=>crms_parameter_info.
+    DATA par TYPE zcl_abap2md_main=>parameter_info.
 
     IF line_exists( i_method-parameter_infos[ direction = iv_dir ] ).
       APPEND |    { iv_dir }| TO ct_text.
@@ -1180,4 +855,43 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
 
 
   ENDMETHOD.
+
+  METHOD extract_word.
+**/
+* extract the initial word of the text separated by space and remove this from the first line.
+* leading and traling spaces will be removed from the resulting first line.
+*
+* @param text contains the text lines.
+* @return the first word of the first line.
+*/
+    IF text IS NOT INITIAL.
+      IF text[ 1 ] CA space.
+        DATA(idx) = sy-fdpos.
+        r_result = substring( val = text[ 1 ] len = idx ).
+        text[ 1 ] = condense( substring( val = text[ 1 ] off = idx ) ).
+      ELSE.
+        r_result = text[ 1 ].
+        CLEAR text[ 1 ].
+      ENDIF.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD parse_class_docu.
+    DATA(tokens) = CAST lif_parser( NEW lcl_tag_def_parser( NEW lcl_comment_parser( i_source ) ) ).
+
+* Scan for tags
+    DO.
+
+      DATA(chunk) = tokens->next_chunk( ).
+      IF chunk IS INITIAL.
+        EXIT.
+      ENDIF.
+
+      ms_class_docu_structure-description = chunk.
+
+    ENDDO.
+
+  ENDMETHOD.
+
 ENDCLASS.

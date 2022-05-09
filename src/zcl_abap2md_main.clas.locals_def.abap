@@ -27,7 +27,13 @@ CLASS lcl_tag_def_parser DEFINITION.
       IMPORTING
         i_src TYPE REF TO lif_parser.
   PRIVATE SECTION.
+    TYPES: BEGIN OF pair,
+             keyword TYPE string,
+             text    TYPE string,
+           END OF pair.
     DATA src TYPE REF TO lif_parser.
     DATA mt_chunk TYPE rswsourcet.
     DATA mode TYPE c.
+    DATA: pairs TYPE STANDARD TABLE OF pair,
+          p TYPE lcl_tag_def_parser=>pair.
 ENDCLASS.

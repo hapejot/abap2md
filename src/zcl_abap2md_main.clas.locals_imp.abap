@@ -38,6 +38,7 @@ CLASS lcl_comment_parser IMPLEMENTATION.
         in_comment = abap_true.
       ENDIF.
     ENDLOOP.
+    CLEAR mt_text[].
   ENDMETHOD.
 
 ENDCLASS.
@@ -51,34 +52,81 @@ CLASS lcl_tag_def_parser IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD lif_parser~next_chunk.
+    DATA out TYPE REF TO string.
+
 
     IF mt_chunk IS INITIAL.
       mt_chunk = src->next_chunk( ).
     ENDIF.
-    WHILE lines( mt_chunk ) > 0.
-      DATA(line) = mt_chunk[ 1 ].
-      DELETE mt_chunk INDEX 1.
-      SPLIT line AT '@' INTO TABLE DATA(lt_parts).
 
-      WHILE lines( lt_parts ) > 0.
-        DATA(plain) = |{ lt_parts[ 1 ] }|.
-        CASE mode.
-          WHEN 'T'.
-            IF plain IS NOT INITIAL.
-              APPEND plain TO ls_chunk.
+    IF pairs IS INITIAL.
+      LOOP AT mt_chunk INTO DATA(line).
+        SPLIT line AT '@' INTO TABLE DATA(lt_parts).
+        LOOP AT lt_parts INTO DATA(part).
+          IF sy-tabix > 1.
+            IF strlen( part ) = 0.
+              DATA(part_idx) = sy-tabix.
+              APPEND VALUE #( text = |@{ lt_parts[ part_idx + 1 ] }| )
+                    TO pairs.
+              DELETE lt_parts INDEX part_idx + 1.
+            ELSE.
+              DATA(x) = xsdbool( part CA space ).
+              DATA(idx) = sy-fdpos.
+              IF idx >= strlen( part ).
+                APPEND VALUE #( keyword = part )
+                      TO pairs.
+              ELSE.
+                APPEND VALUE #( keyword = part(idx) text = substring( val = part off = idx + 1 ) )
+                      TO pairs.
+              ENDIF.
             ENDIF.
-            DELETE lt_parts INDEX 1.
-            IF lines( lt_parts ) > 0.
-              mode = 'K'.
+          ELSE.
+            " if there are @ signs, lines are > 1 and we do not add empty lines
+            CONDENSE part.
+            IF lines( lt_parts ) = 1 OR part IS NOT INITIAL.
+              APPEND VALUE #( keyword = '@n' text = part ) TO pairs.
             ENDIF.
-          WHEN 'K'.
-            DATA(x) = xsdbool( plain CA space ).
-            DATA(idx) = sy-fdpos.
-            ls_chunk = VALUE #( ( |@{ plain(idx) }| ) ).
-            DELETE lt_parts INDEX 1.
-        ENDCASE.
-      ENDWHILE.
+          ENDIF.
+        ENDLOOP.
+        IF sy-subrc = 4. " no parts means empty line... they should be preserved.
+          APPEND VALUE #( keyword = '@n' ) TO pairs.
+        ENDIF.
+      ENDLOOP.
+      CLEAR mt_chunk[].
+    ENDIF.
+
+    IF mode = 'K'.
+      mode = 'T'.
+      APPEND INITIAL LINE TO ls_chunk REFERENCE INTO out.
+      out->* = p-text.
+      DELETE pairs INDEX 1.
+    ENDIF.
+
+    WHILE pairs IS NOT INITIAL.
+      p = pairs[ 1 ].
+      CASE p-keyword.
+        WHEN '@n'.
+          mode = 'T'.
+          APPEND INITIAL LINE TO ls_chunk REFERENCE INTO out.
+          out->* = |{ out->* }{ p-text }|.
+          DELETE pairs INDEX 1.
+        WHEN ``.
+          mode = 'T'.
+          out->* = |{ out->* }{ p-text }|.
+          DELETE pairs INDEX 1.
+        WHEN OTHERS.
+          IF mode IS INITIAL.
+            ls_chunk = VALUE #( ( |@{ p-keyword }| ) ).
+            mode = 'K'.
+          ELSE.
+            CLEAR mode.
+          ENDIF.
+          RETURN.
+      ENDCASE.
     ENDWHILE.
+
+
+
   ENDMETHOD.
 
 ENDCLASS.
