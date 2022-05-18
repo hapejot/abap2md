@@ -125,7 +125,7 @@ ENDCLASS.
 
 
 
-CLASS zcl_abap2md_main IMPLEMENTATION.
+CLASS ZCL_ABAP2MD_MAIN IMPLEMENTATION.
 
 
   METHOD add_message_symsg.
@@ -326,7 +326,25 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
   ENDMETHOD.
 
 
-
+  METHOD extract_word.
+**/
+* extract the initial word of the text separated by space and remove this from the first line.
+* leading and traling spaces will be removed from the resulting first line.
+*
+* @param text contains the text lines.
+* @return the first word of the first line.
+*/
+    IF text IS NOT INITIAL.
+      IF text[ 1 ] CA space.
+        DATA(idx) = sy-fdpos.
+        r_result = substring( val = text[ 1 ] len = idx ).
+        text[ 1 ] = condense( substring( val = text[ 1 ] off = idx ) ).
+      ELSE.
+        r_result = text[ 1 ].
+        CLEAR text[ 1 ].
+      ENDIF.
+    ENDIF.
+  ENDMETHOD.
 
 
   METHOD generate_multiple.
@@ -400,6 +418,24 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
                               iv_cp     =  1100                " SAP character set identification
                                       ).
 
+
+  ENDMETHOD.
+
+
+  METHOD parse_class_docu.
+    DATA(tokens) = CAST lif_parser( NEW lcl_tag_def_parser( NEW lcl_comment_parser( i_source ) ) ).
+
+* Scan for tags
+    DO.
+
+      DATA(chunk) = tokens->next_chunk( ).
+      IF chunk IS INITIAL.
+        EXIT.
+      ENDIF.
+
+      ms_class_docu_structure-description = chunk.
+
+    ENDDO.
 
   ENDMETHOD.
 
@@ -485,9 +521,6 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
 
 
   ENDMETHOD.
-
-
-
 
 
   METHOD read_class_info.
@@ -786,8 +819,21 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
 * @param ct_text output is appended to this.
 * @param i_method info structure describing the method.
 */
-    DATA: par    TYPE zcl_abap2md_main=>parameter_info.
+    DATA: par TYPE zcl_abap2md_main=>parameter_info,
+          hd  TYPE stringtab.
 
+    IF abap_true = i_method-static.
+      APPEND `STATIC` TO hd.
+    ENDIF.
+    CASE i_method-exposure.
+      WHEN 0. APPEND `PRIVATE` TO hd.
+      WHEN 1. APPEND `PROTECTED` TO hd.
+      WHEN 2.	APPEND `PUBLIC` TO hd.
+    ENDCASE.
+    APPEND `METHOD` TO hd.
+    APPEND i_method-method_name TO hd.
+    CONCATENATE LINES OF hd INTO DATA(line) SEPARATED BY space.
+    APPEND |    { line }| TO ct_text.
 
     write_out_param_dir(  EXPORTING
                             i_method = i_method
@@ -857,43 +903,4 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
 
 
   ENDMETHOD.
-
-  METHOD extract_word.
-**/
-* extract the initial word of the text separated by space and remove this from the first line.
-* leading and traling spaces will be removed from the resulting first line.
-*
-* @param text contains the text lines.
-* @return the first word of the first line.
-*/
-    IF text IS NOT INITIAL.
-      IF text[ 1 ] CA space.
-        DATA(idx) = sy-fdpos.
-        r_result = substring( val = text[ 1 ] len = idx ).
-        text[ 1 ] = condense( substring( val = text[ 1 ] off = idx ) ).
-      ELSE.
-        r_result = text[ 1 ].
-        CLEAR text[ 1 ].
-      ENDIF.
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD parse_class_docu.
-    DATA(tokens) = CAST lif_parser( NEW lcl_tag_def_parser( NEW lcl_comment_parser( i_source ) ) ).
-
-* Scan for tags
-    DO.
-
-      DATA(chunk) = tokens->next_chunk( ).
-      IF chunk IS INITIAL.
-        EXIT.
-      ENDIF.
-
-      ms_class_docu_structure-description = chunk.
-
-    ENDDO.
-
-  ENDMETHOD.
-
 ENDCLASS.
