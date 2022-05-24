@@ -3,9 +3,7 @@ CLASS ltcl_main DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS.
 
   PRIVATE SECTION.
-    METHODS:
-      comment_parsing FOR TESTING RAISING cx_static_check,
-      comment_parse_stg1 FOR TESTING RAISING cx_static_check,
+    METHODS: comment_parse_stg1 FOR TESTING RAISING cx_static_check,
       comment_parse_stg2 FOR TESTING RAISING cx_static_check.
     METHODS get_code_fragment
       RETURNING
@@ -29,7 +27,7 @@ CLASS ltcl_main IMPLEMENTATION.
                 ( |@param EV_NEXT_TAG        Next/Last found tag| )
                 ( |@param EV_TAG_VALUE       Tag value| )
                 ( |@param et_description     Description found until found tag| )
-                ( |@param CV_NEXT_INDENT     Next indent to be used| )
+                ( |@param   CV_NEXT_INDENT     Next indent  to  be used| )
                 ( |@param CT_SOURCE          Source description| )
                 ( || )
                 ( |@return abap_bool *abap_true* if succesfull,| )
@@ -52,26 +50,28 @@ CLASS ltcl_main IMPLEMENTATION.
                 ( |Known tag values:| )
                 ( |*@EXCEPTION*, *@PARAM*, *@RETURN*, *@THROWS*.| )
                 ( || )
-                ( || ) ) TO chunks.
-    APPEND VALUE #( ( |@param| ) ) TO chunks.
-    APPEND VALUE #( (  |EV_NEXT_TAG        Next/Last found tag| ) ) TO chunks.
-    APPEND VALUE #( ( |@param| ) ) TO chunks.
-    APPEND VALUE #( ( |EV_TAG_VALUE       Tag value| ) ) TO chunks.
-    APPEND VALUE #( ( |@param| ) ) TO chunks.
+                ( || ) )                                                        TO chunks.
+    APPEND VALUE #( ( |@param| ) )                                              TO chunks.
+    APPEND VALUE #( (  |EV_NEXT_TAG        Next/Last found tag| ) )             TO chunks.
+    APPEND VALUE #( ( |@param| ) )                                              TO chunks.
+    APPEND VALUE #( ( |EV_TAG_VALUE       Tag value| ) )                        TO chunks.
+    APPEND VALUE #( ( |@param| ) )                                              TO chunks.
     APPEND VALUE #( ( |et_description     Description found until found tag| ) ) TO chunks.
-    APPEND VALUE #( ( |@param| ) ) TO chunks.
-    APPEND VALUE #( ( |CV_NEXT_INDENT     Next indent to be used| ) ) TO chunks.
-    APPEND VALUE #( ( |@param| ) ) TO chunks.
-    APPEND VALUE #( ( |CT_SOURCE          Source description| ) ( || )  ) TO chunks.
-    APPEND VALUE #( ( |@return| ) ) TO chunks.
-    APPEND VALUE #( ( |abap_bool *abap_true* if succesfull,| )  ( |*abap_false* otherwise| ) ) TO chunks.
-    APPEND VALUE #( ( |@raising| ) ) TO chunks.
-    APPEND VALUE #( ( |cx_nothing          Exception for nothing.| )  ) TO chunks.
-    APPEND VALUE #( ( |@throws| ) ) TO chunks.
-    APPEND VALUE #( ( |cx_something         Exception for something.| )  ) TO chunks.
-    APPEND VALUE #( ( |@exception| ) ) TO chunks.
-    APPEND VALUE #( ( |cx_anything       Exception for anything.| )  ) TO chunks.
-    APPEND VALUE #( ) TO chunks.
+    APPEND VALUE #( ( |@param| ) )                                              TO chunks.
+    APPEND VALUE #( ( |CV_NEXT_INDENT     Next indent  to  be used| ) )           TO chunks.
+    APPEND VALUE #( ( |@param| ) )                                              TO chunks.
+    APPEND VALUE #( ( |CT_SOURCE          Source description| )
+                    ( || )  )                                                   TO chunks.
+    APPEND VALUE #( ( |@return| ) )                                             TO chunks.
+    APPEND VALUE #( ( |abap_bool *abap_true* if succesfull,| )
+                    ( |*abap_false* otherwise| ) )                              TO chunks.
+    APPEND VALUE #( ( |@raising| ) )                                            TO chunks.
+    APPEND VALUE #( ( |cx_nothing          Exception for nothing.| )  )         TO chunks.
+    APPEND VALUE #( ( |@throws| ) )                                             TO chunks.
+    APPEND VALUE #( ( |cx_something         Exception for something.| )  )      TO chunks.
+    APPEND VALUE #( ( |@exception| ) )                                          TO chunks.
+    APPEND VALUE #( ( |cx_anything       Exception for anything.| )  )          TO chunks.
+    APPEND VALUE #( )                                                           TO chunks.
 
     LOOP AT chunks INTO DATA(chunk).
       cl_abap_unit_assert=>assert_equals( msg = |{ sy-tabix }| exp = chunk act = cut->next_chunk( ) ).
@@ -79,59 +79,7 @@ CLASS ltcl_main IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD comment_parsing.
-    DATA: ls_meth TYPE zcl_abap2md_main=>method_info.
-    DATA(cut) = NEW zcl_abap2md_main( ).
 
-    ls_meth-description = get_code_fragment( ).
-    cut->parse_method_docu(
-      CHANGING
-        cs_method_info = ls_meth
-    ).
-    DATA lt_desc LIKE ls_meth-description.
-    lt_desc = VALUE #(
-                ( |This method collects the description until the next JavaDoc-like tag| )
-                ( |Known tag values:| )
-                ( |*@EXCEPTION*, *@PARAM*, *@RETURN*, *@THROWS*.| )
-                ( || )
-                ( || )
-     ).
-    cl_abap_unit_assert=>assert_equals( msg = 'msg' exp = lt_desc act = ls_meth-description ).
-    cl_abap_unit_assert=>assert_equals( msg = 'params' exp = 5 act = lines( ls_meth-parameter_infos ) ).
-
-    DATA(param) = ls_meth-parameter_infos[ parameter_name = 'EV_NEXT_TAG' ].
-    DATA exp LIKE param-description.
-    exp = VALUE #( ( |Next/Last found tag| ) ).
-    cl_abap_unit_assert=>assert_equals( msg = 'param1' exp = exp  act = param-description ).
-
-    param = ls_meth-parameter_infos[ parameter_name = 'EV_TAG_VALUE' ].
-    exp = VALUE #( ( |Tag value| ) ).
-    cl_abap_unit_assert=>assert_equals( msg = 'param2' exp = exp  act = param-description ).
-
-    param = ls_meth-parameter_infos[ parameter_name = 'ET_DESCRIPTION' ].
-    exp = VALUE #( ( |Description found until found tag| ) ).
-    cl_abap_unit_assert=>assert_equals( msg = 'param3' exp = exp  act = param-description ).
-
-    param = ls_meth-parameter_infos[ parameter_name = 'CV_NEXT_INDENT' ].
-    exp = VALUE #( ( |Next indent to be used| ) ).
-    cl_abap_unit_assert=>assert_equals( msg = 'param4' exp = exp  act = param-description ).
-
-    param = ls_meth-parameter_infos[ parameter_name = 'CT_SOURCE' ].
-    exp = VALUE #( ( |Source description| )  ( || ) ).
-    cl_abap_unit_assert=>assert_equals( msg = 'param5' exp = exp  act = param-description ).
-
-    exp = VALUE #(  ( |abap_bool *abap_true* if succesfull,| )
-                    ( |*abap_false* otherwise| ) ).
-    cl_abap_unit_assert=>assert_equals( msg = 'returns' exp = exp  act = ls_meth-return_info-description ).
-
-    cl_abap_unit_assert=>assert_equals( msg = 'exceptions' exp = 3 act = lines( ls_meth-exception_infos ) ).
-
-    DATA(exc) = ls_meth-exception_infos[ exception_name = 'CX_NOTHING' ].
-    exp = VALUE #( ( |Exception for nothing.| ) ).
-    cl_abap_unit_assert=>assert_equals( msg = 'cx_nothing' exp = exp act = exc-description ).
-
-
-  ENDMETHOD.
 
   METHOD get_code_fragment.
 
@@ -146,7 +94,7 @@ CLASS ltcl_main IMPLEMENTATION.
                 ( |* @param EV_NEXT_TAG        Next/Last found tag| )
                 ( |* @param EV_TAG_VALUE       Tag value| )
                 ( |* @param et_description     Description found until found tag| )
-                ( |* @param CV_NEXT_INDENT     Next indent to be used| )
+                ( |* @param   CV_NEXT_INDENT     Next indent  to  be used| )  " test irregular spaces
                 ( |* @param CT_SOURCE          Source description| )
                 ( |*| )
                 ( |* @return abap_bool *abap_true* if succesfull,| )
@@ -167,5 +115,76 @@ CLASS ltcl_main IMPLEMENTATION.
   ENDMETHOD.
 
 
+
+ENDCLASS.
+
+CLASS ltcl_markdown DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
+
+  PRIVATE SECTION.
+    METHODS:
+      generate FOR TESTING RAISING cx_static_check.
+ENDCLASS.
+
+CLASS ltcl_markdown IMPLEMENTATION.
+
+
+  METHOD generate.
+    DATA(cut) = CAST lif_text_generator( NEW lcl_markdown( ) ).
+    cl_abap_unit_assert=>assert_bound( cut ).
+    DATA(code) = VALUE stringtab(
+            ( `PUBLIC METHOD CONSTRUCTOR` )
+            ( `IMPORTING` )
+            ( `    PREVIOUS                            TYPE PREVIOUS` )
+            ( `    TEXTID                              TYPE IF_T100_MESSAGE=>T100KEY` ) ).
+    cut->heading(
+            iv_level = 1
+            iv_text  = `NAME`
+    )->text( `ZCX_ABAP2MD_ERROR - Converter Error`
+    )->heading(
+            iv_level = 2
+            iv_text = `CONSTRUCTOR`
+    )->text( `CONSTRUCTOR`
+    )->new_paragraph(
+    )->text( value stringtab( ( `some additional text here for showing this is a` )
+                              ( `multiline paragraph.` ) )
+    )->code( code
+    )->definition(
+            iv_text = `reference to the previous exception if any. Initial if unknown.`
+            iv_def = `PREVIOUS`
+    )->definition(
+            iv_text = VALUE stringtab( ( `Text ID referring to the text` )
+                                       ( `defining the message that will be used.`) )
+            iv_def = `TEXTID`
+    ).
+    DATA(text) = cut->result( ).
+
+    DATA(expected_text) = VALUE stringtab(
+            ( `# NAME` )
+            (  )
+            ( `ZCX_ABAP2MD_ERROR - Converter Error` )
+            (  )
+            ( `## CONSTRUCTOR` )
+            (  )
+            ( `CONSTRUCTOR` )
+            (  )
+            ( `some additional text here for showing this is a` )
+            ( `multiline paragraph.` )
+            ( )
+            ( `    PUBLIC METHOD CONSTRUCTOR` )
+            ( `    IMPORTING` )
+            ( `        PREVIOUS                            TYPE PREVIOUS` )
+            ( `        TEXTID                              TYPE IF_T100_MESSAGE=>T100KEY` )
+            ( )
+            ( `**PREVIOUS**` )
+            ( `:  reference to the previous exception if any. Initial if unknown.` )
+            ( )
+            ( `**TEXTID**` )
+            ( `:  Text ID referring to the text` )
+            ( `   defining the message that will be used.` )
+    ).
+    cl_abap_unit_assert=>assert_equals( exp = expected_text act = text ).
+  ENDMETHOD.
 
 ENDCLASS.
