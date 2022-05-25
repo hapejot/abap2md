@@ -131,6 +131,16 @@ CLASS ltcl_markdown IMPLEMENTATION.
 
 
   METHOD generate.
+    TYPES: BEGIN OF row,
+             no    TYPE i,
+             name  TYPE string,
+             value TYPE string,
+           END OF row.
+    DATA sample_table TYPE STANDARD TABLE OF row.
+
+    sample_table = VALUE #( ( no = 1 name = 'Peter' value = 'Was auch immer' )
+                            ( no = 2 name = 'Karin' value = 'Krank' ) ).
+
     DATA(cut) = CAST lif_text_generator( NEW lcl_markdown( ) ).
     cl_abap_unit_assert=>assert_bound( cut ).
     DATA(code) = VALUE stringtab(
@@ -147,7 +157,8 @@ CLASS ltcl_markdown IMPLEMENTATION.
             iv_text = `CONSTRUCTOR`
     )->text( `CONSTRUCTOR`
     )->new_paragraph(
-    )->text( value stringtab( ( `some additional text here for showing this is a` )
+    )->text( sample_table
+    )->text( VALUE stringtab( ( `some additional text here for showing this is a` )
                               ( `multiline paragraph.` ) )
     )->code( code
     )->definition(
@@ -169,6 +180,11 @@ CLASS ltcl_markdown IMPLEMENTATION.
             (  )
             ( `CONSTRUCTOR` )
             (  )
+            ( ` NO | NAME  | VALUE` )
+            ( `----|-------|----------------` )
+            ( ` 1  | Peter | Was auch immer` )
+            ( ` 2  | Karin | Krank` )
+            ( )
             ( `some additional text here for showing this is a` )
             ( `multiline paragraph.` )
             ( )

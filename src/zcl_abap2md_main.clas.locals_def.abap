@@ -62,6 +62,12 @@ CLASS lcl_markdown DEFINITION.
     INTERFACES lif_text_generator.
   PRIVATE SECTION.
     DATA: mt_text TYPE stringtab.
+    METHODS generate_table
+      IMPORTING
+        io_type TYPE REF TO cl_abap_structdescr
+        it_tab  TYPE STANDARD TABLE
+      RETURNING
+        VALUE(r_out_tab) TYPE stringtab.
 ENDCLASS.
 
 INTERFACE lif_info.

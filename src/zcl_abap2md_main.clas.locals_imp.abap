@@ -241,6 +241,32 @@ CLASS lcl_class_info DEFINITION FINAL.
 
 
 ENDCLASS.
+CLASS lcl_program_info DEFINITION.
+
+  PUBLIC SECTION.
+    INTERFACES lif_info.
+    CLASS-METHODS try_read
+      IMPORTING
+        iv_name          TYPE string
+      RETURNING
+        VALUE(ro_result) TYPE REF TO lif_info.
+    METHODS constructor
+      IMPORTING
+        is_tadir TYPE tadir.
+
+  PROTECTED SECTION.
+
+  PRIVATE SECTION.
+    DATA:
+      ms_tadir       TYPE tadir,
+      ms_text        TYPE trdirt,
+      mv_description TYPE rswsourcet,
+      ms_hd          TYPE trdir.
+    METHODS        user_name
+      IMPORTING
+                iv_uname       TYPE syst_uname
+      RETURNING VALUE(rv_name) TYPE string.
+ENDCLASS.
 
 CLASS lcl_class_info IMPLEMENTATION.
 
@@ -996,10 +1022,17 @@ CLASS lcl_markdown IMPLEMENTATION.
     DATA(lo_type) = cl_abap_typedescr=>describe_by_data( iv_text ).
     CASE lo_type->kind.
       WHEN cl_abap_typedescr=>kind_table.
-        ASSIGN iv_text TO <lt_text>.
-        LOOP AT <lt_text> ASSIGNING <lv_text>.
-          APPEND CONV string( <lv_text> ) TO mt_text.
-        ENDLOOP.
+        " see if the table is a table with one column or multiple columns:
+        DATA(tab) = CAST cl_abap_tabledescr( cl_abap_typedescr=>describe_by_data( iv_text ) ).
+        DATA(struct) = tab->get_table_line_type( ).
+        IF struct->kind = cl_abap_typedescr=>kind_struct.
+          APPEND LINES OF generate_table( io_type = CAST cl_abap_structdescr( struct ) it_tab = iv_text ) TO mt_text.
+        ELSE.
+          ASSIGN iv_text TO <lt_text>.
+          LOOP AT <lt_text> ASSIGNING <lv_text>.
+            APPEND CONV string( <lv_text> ) TO mt_text.
+          ENDLOOP.
+        ENDIF.
       WHEN OTHERS.
         APPEND CONV string( iv_text ) TO mt_text.
     ENDCASE.
@@ -1072,34 +1105,65 @@ CLASS lcl_markdown IMPLEMENTATION.
     ro_gen = me.
   ENDMETHOD.
 
+
+  METHOD generate_table.
+    DATA: col_width TYPE i,
+          sep       TYPE string.
+    FIELD-SYMBOLS: <ls_row>      TYPE any,
+                   <lv_out_line> TYPE string,
+                   <lv_value>    TYPE data.
+    LOOP AT io_type->components INTO DATA(ls_comp).
+      DATA(col_no) = sy-tabix.
+      IF col_no = 1.
+        " create two empty lines for the table header
+        APPEND INITIAL LINE TO r_out_tab.
+        APPEND INITIAL LINE TO r_out_tab.
+        sep = ``.
+      ELSE.
+        sep = `|`.
+      ENDIF.
+
+
+      col_width = strlen( ls_comp-name ).
+      LOOP AT it_tab ASSIGNING <ls_row>.
+        DATA(out_row_no) = sy-tabix + 2. " output row number includes offset for the table header
+        IF col_no = 1.
+          APPEND INITIAL LINE TO r_out_tab ASSIGNING <lv_out_line>.
+        ELSE.
+          ASSIGN r_out_tab[ out_row_no ] TO <lv_out_line>.
+        ENDIF.
+        ASSERT <lv_out_line> IS ASSIGNED.
+        ASSIGN COMPONENT col_no OF STRUCTURE <ls_row> TO <lv_value>.
+
+        " calculate column width
+        DATA(tmp) = |{ <lv_value> WIDTH = col_width }|.
+        IF strlen( tmp ) > col_width.
+          col_width = strlen( tmp ).
+        ENDIF.
+      ENDLOOP.
+      IF col_no > 1.
+        r_out_tab[ 1 ] = |{ r_out_tab[ 1 ] } |.
+        r_out_tab[ 2 ] = |{ r_out_tab[ 2 ] }-|.
+      ENDIF.
+      r_out_tab[ 1 ] = |{ r_out_tab[ 1 ] }{ sep } { ls_comp-name WIDTH = col_width }|.
+      r_out_tab[ 2 ] = |{ r_out_tab[ 2 ] }{ sep }{ repeat( val = '-' occ = col_width + 1 ) }|.
+      LOOP AT it_tab ASSIGNING <ls_row>.
+        out_row_no = sy-tabix + 2. " output row number includes offset for the table header
+        ASSIGN r_out_tab[ out_row_no ] TO <lv_out_line>.
+        ASSERT <lv_out_line> IS ASSIGNED.
+        ASSIGN COMPONENT col_no OF STRUCTURE <ls_row> TO <lv_value>.
+        IF col_no > 1.
+          <lv_out_line> = |{ <lv_out_line> } |.
+        ENDIF.
+        <lv_out_line> = |{ <lv_out_line> }{ sep } { <lv_value> WIDTH = col_width }|.
+        " calculate column width
+      ENDLOOP.
+    ENDLOOP.
+    APPEND INITIAL LINE TO r_out_tab.
+  ENDMETHOD.
+
 ENDCLASS.
 
-CLASS lcl_program_info DEFINITION FINAL.
-
-  PUBLIC SECTION.
-    INTERFACES lif_info.
-    CLASS-METHODS try_read
-      IMPORTING
-        iv_name          TYPE string
-      RETURNING
-        VALUE(ro_result) TYPE REF TO lif_info.
-    METHODS constructor
-      IMPORTING
-        is_tadir TYPE tadir.
-
-  PROTECTED SECTION.
-
-  PRIVATE SECTION.
-    DATA:
-      ms_tadir       TYPE tadir,
-      ms_text        TYPE trdirt,
-      mv_description TYPE rswsourcet,
-      ms_hd          TYPE trdir.
-    METHODS        user_name
-      IMPORTING
-                iv_uname       TYPE syst_uname
-      RETURNING VALUE(rv_name) TYPE string.
-ENDCLASS.
 
 CLASS lcl_program_info IMPLEMENTATION.
 
