@@ -5,7 +5,7 @@
 
 
 INTERFACE lif_parser.
-  METHODS next_chunk RETURNING VALUE(ls_chunk) TYPE rswsourcet.
+  METHODS next_chunk RETURNING VALUE(r_chunk) TYPE rswsourcet.
 ENDINTERFACE.
 
 CLASS lcl_comment_parser DEFINITION.
@@ -16,6 +16,12 @@ CLASS lcl_comment_parser DEFINITION.
         i_text TYPE rswsourcet.
   PRIVATE SECTION.
     DATA mt_text TYPE rswsourcet.
+    METHODS has_more_lines
+      RETURNING
+        value(r_result) TYPE abap_bool.
+    METHODS read_next_line
+      RETURNING
+        value(rv_text) TYPE string.
 
 ENDCLASS.
 
@@ -62,12 +68,6 @@ CLASS lcl_markdown DEFINITION.
     INTERFACES lif_text_generator.
   PRIVATE SECTION.
     DATA: mt_text TYPE stringtab.
-    METHODS generate_table
-      IMPORTING
-        io_type TYPE REF TO cl_abap_structdescr
-        it_tab  TYPE STANDARD TABLE
-      RETURNING
-        VALUE(r_out_tab) TYPE stringtab.
 ENDCLASS.
 
 INTERFACE lif_info.

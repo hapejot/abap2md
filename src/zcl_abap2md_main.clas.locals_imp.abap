@@ -12,33 +12,52 @@ CLASS lcl_comment_parser IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD lif_parser~next_chunk.
-    DATA in_comment TYPE abap_bool.
-    DATA: lv_text LIKE LINE OF mt_text.
+    DATA: in_comment TYPE abap_bool,
+          lv_text    TYPE string.
 
-    LOOP AT mt_text INTO lv_text.
-      IF lv_text = '*/'.
-        in_comment = abap_false.
-        EXIT.
-      ENDIF.
-
-      IF abap_true = in_comment.
-        IF strlen( lv_text ) > 0 AND lv_text(1) = '*'.
-          IF strlen( lv_text ) > 2.
-            APPEND |{ substring( val = lv_text off = 2 ) }| TO ls_chunk.
-          ELSE.
-            APPEND || TO ls_chunk.
+    WHILE has_more_lines( ).
+      lv_text = read_next_line( ).
+      CASE in_comment.
+        WHEN abap_true.
+          IF lv_text = '*/'.
+            in_comment = abap_false.
+            EXIT.
           ENDIF.
-        ELSE.
-          in_comment = abap_false.
-          EXIT.
-        ENDIF.
-      ENDIF.
+          IF strlen( lv_text ) > 0 AND lv_text(1) = '*'.
+            IF strlen( lv_text ) > 2.
+              APPEND |{ substring( val = lv_text off = 2 ) }| TO r_chunk.
+            ELSE.
+              APPEND || TO r_chunk.
+            ENDIF.
+          ELSE.
+            in_comment = abap_false.
+            EXIT.
+          ENDIF.
 
-      IF lv_text = '**/'.
-        in_comment = abap_true.
-      ENDIF.
-    ENDLOOP.
-    CLEAR mt_text[].
+        WHEN abap_false.
+          IF 0 <= find( val   = lv_text
+                        regex = '^\*\*/').
+            IF strlen( lv_text ) > 3.
+              APPEND lv_text+3 TO r_chunk.
+            ENDIF.
+            in_comment = abap_true.
+          ENDIF.
+      ENDCASE.
+    ENDWHILE.
+  ENDMETHOD.
+
+  METHOD read_next_line.
+
+    rv_text = mt_text[ 1 ].
+    DELETE mt_text INDEX 1.
+
+
+  ENDMETHOD.
+
+
+
+  METHOD has_more_lines.
+    r_result = boolc( mt_text IS NOT INITIAL ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -48,18 +67,21 @@ CLASS lcl_tag_def_parser IMPLEMENTATION.
   METHOD constructor.
 
     me->src = i_src.
-    mode = 'T'.
+
   ENDMETHOD.
 
   METHOD lif_parser~next_chunk.
     DATA out TYPE REF TO string.
 
 
-    IF mt_chunk IS INITIAL.
-      mt_chunk = src->next_chunk( ).
-    ENDIF.
-
+    " we have pairs to work on, so we return those otherwise
+    " we extract the pairs form *mt_chunk*
     IF pairs IS INITIAL.
+      " read raw data if nothing is there to work on.
+      IF mt_chunk IS INITIAL.
+        mt_chunk = src->next_chunk( ).
+        CLEAR mode.
+      ENDIF.
       LOOP AT mt_chunk INTO DATA(line).
         SPLIT line AT '@' INTO TABLE DATA(lt_parts).
         LOOP AT lt_parts INTO DATA(part).
@@ -98,7 +120,7 @@ CLASS lcl_tag_def_parser IMPLEMENTATION.
 
     IF mode = 'K'.
       mode = 'T'.
-      APPEND INITIAL LINE TO ls_chunk REFERENCE INTO out.
+      APPEND INITIAL LINE TO r_chunk REFERENCE INTO out.
       out->* = p-text.
       DELETE pairs INDEX 1.
     ENDIF.
@@ -108,7 +130,7 @@ CLASS lcl_tag_def_parser IMPLEMENTATION.
       CASE p-keyword.
         WHEN '@n'.
           mode = 'T'.
-          APPEND INITIAL LINE TO ls_chunk REFERENCE INTO out.
+          APPEND INITIAL LINE TO r_chunk REFERENCE INTO out.
           out->* = |{ out->* }{ p-text }|.
           DELETE pairs INDEX 1.
         WHEN ``.
@@ -117,7 +139,7 @@ CLASS lcl_tag_def_parser IMPLEMENTATION.
           DELETE pairs INDEX 1.
         WHEN OTHERS.
           IF mode IS INITIAL.
-            ls_chunk = VALUE #( ( |@{ p-keyword }| ) ).
+            r_chunk = VALUE #( ( |@{ p-keyword }| ) ).
             mode = 'K'.
           ELSE.
             CLEAR mode.
@@ -240,32 +262,6 @@ CLASS lcl_class_info DEFINITION FINAL.
 
 
 
-ENDCLASS.
-CLASS lcl_program_info DEFINITION.
-
-  PUBLIC SECTION.
-    INTERFACES lif_info.
-    CLASS-METHODS try_read
-      IMPORTING
-        iv_name          TYPE string
-      RETURNING
-        VALUE(ro_result) TYPE REF TO lif_info.
-    METHODS constructor
-      IMPORTING
-        is_tadir TYPE tadir.
-
-  PROTECTED SECTION.
-
-  PRIVATE SECTION.
-    DATA:
-      ms_tadir       TYPE tadir,
-      ms_text        TYPE trdirt,
-      mv_description TYPE rswsourcet,
-      ms_hd          TYPE trdir.
-    METHODS        user_name
-      IMPORTING
-                iv_uname       TYPE syst_uname
-      RETURNING VALUE(rv_name) TYPE string.
 ENDCLASS.
 
 CLASS lcl_class_info IMPLEMENTATION.
@@ -633,9 +629,12 @@ CLASS lcl_class_info IMPLEMENTATION.
       APPEND `STATIC` TO hd.
     ENDIF.
     CASE i_method-exposure.
-      WHEN 0. APPEND `PRIVATE`      TO hd.
-      WHEN 1. APPEND `PROTECTED`    TO hd.
-      WHEN 2. APPEND `PUBLIC`       TO hd.
+      WHEN 0.
+        APPEND `PRIVATE`      TO hd.
+      WHEN 1.
+        APPEND `PROTECTED`    TO hd.
+      WHEN 2.
+        APPEND `PUBLIC`       TO hd.
     ENDCASE.
     APPEND `METHOD` TO hd.
     APPEND i_method-method_name TO hd.
@@ -1022,17 +1021,10 @@ CLASS lcl_markdown IMPLEMENTATION.
     DATA(lo_type) = cl_abap_typedescr=>describe_by_data( iv_text ).
     CASE lo_type->kind.
       WHEN cl_abap_typedescr=>kind_table.
-        " see if the table is a table with one column or multiple columns:
-        DATA(tab) = CAST cl_abap_tabledescr( cl_abap_typedescr=>describe_by_data( iv_text ) ).
-        DATA(struct) = tab->get_table_line_type( ).
-        IF struct->kind = cl_abap_typedescr=>kind_struct.
-          APPEND LINES OF generate_table( io_type = CAST cl_abap_structdescr( struct ) it_tab = iv_text ) TO mt_text.
-        ELSE.
-          ASSIGN iv_text TO <lt_text>.
-          LOOP AT <lt_text> ASSIGNING <lv_text>.
-            APPEND CONV string( <lv_text> ) TO mt_text.
-          ENDLOOP.
-        ENDIF.
+        ASSIGN iv_text TO <lt_text>.
+        LOOP AT <lt_text> ASSIGNING <lv_text>.
+          APPEND CONV string( <lv_text> ) TO mt_text.
+        ENDLOOP.
       WHEN OTHERS.
         APPEND CONV string( iv_text ) TO mt_text.
     ENDCASE.
@@ -1105,65 +1097,34 @@ CLASS lcl_markdown IMPLEMENTATION.
     ro_gen = me.
   ENDMETHOD.
 
-
-  METHOD generate_table.
-    DATA: col_width TYPE i,
-          sep       TYPE string.
-    FIELD-SYMBOLS: <ls_row>      TYPE any,
-                   <lv_out_line> TYPE string,
-                   <lv_value>    TYPE data.
-    LOOP AT io_type->components INTO DATA(ls_comp).
-      DATA(col_no) = sy-tabix.
-      IF col_no = 1.
-        " create two empty lines for the table header
-        APPEND INITIAL LINE TO r_out_tab.
-        APPEND INITIAL LINE TO r_out_tab.
-        sep = ``.
-      ELSE.
-        sep = `|`.
-      ENDIF.
-
-
-      col_width = strlen( ls_comp-name ).
-      LOOP AT it_tab ASSIGNING <ls_row>.
-        DATA(out_row_no) = sy-tabix + 2. " output row number includes offset for the table header
-        IF col_no = 1.
-          APPEND INITIAL LINE TO r_out_tab ASSIGNING <lv_out_line>.
-        ELSE.
-          ASSIGN r_out_tab[ out_row_no ] TO <lv_out_line>.
-        ENDIF.
-        ASSERT <lv_out_line> IS ASSIGNED.
-        ASSIGN COMPONENT col_no OF STRUCTURE <ls_row> TO <lv_value>.
-
-        " calculate column width
-        DATA(tmp) = |{ <lv_value> WIDTH = col_width }|.
-        IF strlen( tmp ) > col_width.
-          col_width = strlen( tmp ).
-        ENDIF.
-      ENDLOOP.
-      IF col_no > 1.
-        r_out_tab[ 1 ] = |{ r_out_tab[ 1 ] } |.
-        r_out_tab[ 2 ] = |{ r_out_tab[ 2 ] }-|.
-      ENDIF.
-      r_out_tab[ 1 ] = |{ r_out_tab[ 1 ] }{ sep } { ls_comp-name WIDTH = col_width }|.
-      r_out_tab[ 2 ] = |{ r_out_tab[ 2 ] }{ sep }{ repeat( val = '-' occ = col_width + 1 ) }|.
-      LOOP AT it_tab ASSIGNING <ls_row>.
-        out_row_no = sy-tabix + 2. " output row number includes offset for the table header
-        ASSIGN r_out_tab[ out_row_no ] TO <lv_out_line>.
-        ASSERT <lv_out_line> IS ASSIGNED.
-        ASSIGN COMPONENT col_no OF STRUCTURE <ls_row> TO <lv_value>.
-        IF col_no > 1.
-          <lv_out_line> = |{ <lv_out_line> } |.
-        ENDIF.
-        <lv_out_line> = |{ <lv_out_line> }{ sep } { <lv_value> WIDTH = col_width }|.
-        " calculate column width
-      ENDLOOP.
-    ENDLOOP.
-    APPEND INITIAL LINE TO r_out_tab.
-  ENDMETHOD.
-
 ENDCLASS.
 
+CLASS lcl_program_info DEFINITION FINAL.
+
+  PUBLIC SECTION.
+    INTERFACES lif_info.
+    CLASS-METHODS try_read
+      IMPORTING
+        iv_name          TYPE string
+      RETURNING
+        VALUE(ro_result) TYPE REF TO lif_info.
+    METHODS constructor
+      IMPORTING
+        is_tadir TYPE tadir.
+
+  PROTECTED SECTION.
+
+  PRIVATE SECTION.
+    DATA:
+      ms_tadir       TYPE tadir,
+      ms_text        TYPE trdirt,
+      mv_description TYPE rswsourcet,
+      ms_hd          TYPE trdir.
+    METHODS        user_name
+      IMPORTING
+                iv_uname       TYPE syst_uname
+      RETURNING VALUE(rv_name) TYPE string.
+ENDCLASS.
 
 CLASS lcl_program_info IMPLEMENTATION.
 
@@ -1260,6 +1221,62 @@ CLASS lcl_program_info IMPLEMENTATION.
     rv_name = |{ ls_address-firstname } { ls_address-lastname }|.
     IF ls_company-company IS NOT INITIAL.
       rv_name = |{ rv_name } ({ ls_company-company })|.
+    ENDIF.
+  ENDMETHOD.
+
+ENDCLASS.
+
+CLASS lcl_doc_generator DEFINITION FINAL.
+
+  PUBLIC SECTION.
+    METHODS add_text
+      IMPORTING
+        i_code TYPE stringtab.
+    TYPES: BEGIN OF page,
+             name  TYPE string,
+             title TYPE string,
+             text  TYPE stringtab,
+           END OF page.
+
+    DATA:
+            m_pages TYPE STANDARD TABLE OF page WITH KEY name READ-ONLY.
+  PROTECTED SECTION.
+
+  PRIVATE SECTION.
+    METHODS first_word
+      IMPORTING
+        i_chunk         TYPE rswsourcet
+      RETURNING
+        VALUE(r_result) TYPE string.
+
+ENDCLASS.
+
+CLASS lcl_doc_generator IMPLEMENTATION.
+
+
+  METHOD add_text.
+    DATA(source) = CAST lif_parser( NEW lcl_tag_def_parser( NEW lcl_comment_parser( i_code ) ) ).
+    DO.
+      DATA(chunk) = source->next_chunk( ).
+      IF chunk IS INITIAL.
+        EXIT.
+      ENDIF.
+      CASE chunk[ 1 ].
+        WHEN '@page'.
+          DATA(name) = first_word( chunk ).
+          APPEND VALUE #( ) TO m_pages.
+      ENDCASE.
+    ENDDO.
+  ENDMETHOD.
+
+
+  METHOD first_word.
+    IF i_chunk IS NOT INITIAL.
+      DATA(x) = xsdbool( i_chunk[ 1 ] CA space ).
+      DATA(idx) = sy-fdpos.
+      DATA(left) = substring( val = i_chunk[ 1 ] len = sy-fdpos ).
+      DATA(right) = substring(  val = i_chunk[ 1 ] off = sy-fdpos + 1 ).
+      r_result = left.
     ENDIF.
   ENDMETHOD.
 
