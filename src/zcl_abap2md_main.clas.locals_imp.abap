@@ -115,6 +115,9 @@ CLASS lcl_tag_def_parser IMPLEMENTATION.
           APPEND VALUE #( keyword = '@n' ) TO pairs.
         ENDIF.
       ENDLOOP.
+      IF mt_chunk IS NOT INITIAL.
+        APPEND VALUE #( keyword = '@c' ) TO pairs.
+      ENDIF.
       CLEAR mt_chunk[].
     ENDIF.
 
@@ -1021,10 +1024,17 @@ CLASS lcl_markdown IMPLEMENTATION.
     DATA(lo_type) = cl_abap_typedescr=>describe_by_data( iv_text ).
     CASE lo_type->kind.
       WHEN cl_abap_typedescr=>kind_table.
-        ASSIGN iv_text TO <lt_text>.
-        LOOP AT <lt_text> ASSIGNING <lv_text>.
-          APPEND CONV string( <lv_text> ) TO mt_text.
-        ENDLOOP.
+        " see if the table is a table with one column or multiple columns:
+        DATA(tab) = CAST cl_abap_tabledescr( cl_abap_typedescr=>describe_by_data( iv_text ) ).
+        DATA(struct) = tab->get_table_line_type( ).
+        IF struct->kind = cl_abap_typedescr=>kind_struct.
+          APPEND LINES OF generate_table( io_type = CAST cl_abap_structdescr( struct ) it_tab = iv_text ) TO mt_text.
+        ELSE.
+          ASSIGN iv_text TO <lt_text>.
+          LOOP AT <lt_text> ASSIGNING <lv_text>.
+            APPEND CONV string( <lv_text> ) TO mt_text.
+          ENDLOOP.
+        ENDIF.
       WHEN OTHERS.
         APPEND CONV string( iv_text ) TO mt_text.
     ENDCASE.
@@ -1097,6 +1107,62 @@ CLASS lcl_markdown IMPLEMENTATION.
     ro_gen = me.
   ENDMETHOD.
 
+  METHOD generate_table.
+    DATA: col_width TYPE i,
+          sep       TYPE string.
+    FIELD-SYMBOLS: <ls_row>      TYPE any,
+                   <lv_out_line> TYPE string,
+                   <lv_value>    TYPE data.
+    LOOP AT io_type->components INTO DATA(ls_comp).
+      DATA(col_no) = sy-tabix.
+      IF col_no = 1.
+        " create two empty lines for the table header
+        APPEND INITIAL LINE TO r_out_tab.
+        APPEND INITIAL LINE TO r_out_tab.
+        sep = ``.
+      ELSE.
+        sep = `|`.
+      ENDIF.
+
+
+      col_width = strlen( ls_comp-name ).
+      LOOP AT it_tab ASSIGNING <ls_row>.
+        DATA(out_row_no) = sy-tabix + 2. " output row number includes offset for the table header
+        IF col_no = 1.
+          APPEND INITIAL LINE TO r_out_tab ASSIGNING <lv_out_line>.
+        ELSE.
+          ASSIGN r_out_tab[ out_row_no ] TO <lv_out_line>.
+        ENDIF.
+        ASSERT <lv_out_line> IS ASSIGNED.
+        ASSIGN COMPONENT col_no OF STRUCTURE <ls_row> TO <lv_value>.
+
+        " calculate column width
+        DATA(tmp) = |{ <lv_value> WIDTH = col_width }|.
+        IF strlen( tmp ) > col_width.
+          col_width = strlen( tmp ).
+        ENDIF.
+      ENDLOOP.
+      IF col_no > 1.
+        r_out_tab[ 1 ] = |{ r_out_tab[ 1 ] } |.
+*        r_out_tab[ 2 ] = |{ r_out_tab[ 2 ] }-|.
+      ENDIF.
+      r_out_tab[ 1 ] = |{ r_out_tab[ 1 ] }{ sep } { ls_comp-name WIDTH = col_width }|.
+      r_out_tab[ 2 ] = |{ r_out_tab[ 2 ] }{ sep }{ repeat( val = '-' occ = col_width + 2 ) }|.
+      LOOP AT it_tab ASSIGNING <ls_row>.
+        out_row_no = sy-tabix + 2. " output row number includes offset for the table header
+        ASSIGN r_out_tab[ out_row_no ] TO <lv_out_line>.
+        ASSERT <lv_out_line> IS ASSIGNED.
+        ASSIGN COMPONENT col_no OF STRUCTURE <ls_row> TO <lv_value>.
+        IF col_no > 1.
+          <lv_out_line> = |{ <lv_out_line> } |.
+        ENDIF.
+        <lv_out_line> = |{ <lv_out_line> }{ sep } { <lv_value> WIDTH = col_width }|.
+        " calculate column width
+      ENDLOOP.
+    ENDLOOP.
+    APPEND INITIAL LINE TO r_out_tab.
+  ENDMETHOD.
+
 ENDCLASS.
 
 CLASS lcl_program_info DEFINITION FINAL.
@@ -1119,7 +1185,8 @@ CLASS lcl_program_info DEFINITION FINAL.
       ms_tadir       TYPE tadir,
       ms_text        TYPE trdirt,
       mv_description TYPE rswsourcet,
-      ms_hd          TYPE trdir.
+      ms_hd          TYPE trdir,
+      m_src          TYPE stringtab.
     METHODS        user_name
       IMPORTING
                 iv_uname       TYPE syst_uname
@@ -1161,9 +1228,28 @@ CLASS lcl_program_info IMPLEMENTATION.
                 FROM trdir
                 WHERE name = @ms_tadir-obj_name
                 INTO @ms_hd.
+
+    IF i_gen IS BOUND.
+      i_gen->main_text( REF #( mv_description ) ).
+      i_gen->add_text( m_src ).
+    ENDIF.
+
   ENDMETHOD.
 
   METHOD lif_info~generate_markdown.
+    TYPES: BEGIN OF row,
+             when TYPE string,
+             date TYPE string,
+             user TYPE string,
+           END OF row.
+    DATA: times TYPE STANDARD TABLE OF row.
+
+
+    times = VALUE #(
+                    ( when = `created`      date = |{ ms_hd-cdat DATE = USER }|  user = user_name( ms_hd-cnam ) )
+                    ( when = `last changed` date = |{ ms_hd-udat DATE = USER }|  user = user_name( ms_hd-unam ) )
+     ).
+
     DATA(lo_markdown) = CAST lif_text_generator( NEW lcl_markdown( ) ).
 
     lo_markdown->heading( iv_level = 1 iv_text = ms_tadir-obj_name
@@ -1171,35 +1257,21 @@ CLASS lcl_program_info IMPLEMENTATION.
                 )->new_paragraph(
                 )->text( mv_description
                 )->heading( iv_level = 2 iv_text = 'AUTHOR'
-                )->text( VALUE stringtab(   ( |created      { ms_hd-cdat DATE = USER }: { user_name( ms_hd-cnam ) }| )
-                                            (  )
-                                            ( |last changed { ms_hd-udat DATE = USER }: { user_name( ms_hd-unam ) }| ) ) ).
-
-
+                )->text( times ).
 
     APPEND LINES OF lo_markdown->result( ) TO ct_text.
   ENDMETHOD.
 
   METHOD lif_info~read_main.
 
-    DATA: lt_src TYPE stringtab.
 
 
-    READ REPORT ms_tadir-obj_name INTO lt_src.
 
-    DATA(tokens) = CAST lif_parser( NEW lcl_tag_def_parser( NEW lcl_comment_parser( lt_src ) ) ).
+    READ REPORT ms_tadir-obj_name INTO m_src.
+
+    DATA(tokens) = CAST lif_parser( NEW lcl_tag_def_parser( NEW lcl_comment_parser( m_src ) ) ).
 
 * Scan for tags
-    DO.
-
-      DATA(chunk) = tokens->next_chunk( ).
-      IF chunk IS INITIAL.
-        EXIT.
-      ENDIF.
-
-      mv_description = chunk.
-
-    ENDDO.
 
   ENDMETHOD.
 
@@ -1226,35 +1298,23 @@ CLASS lcl_program_info IMPLEMENTATION.
 
 ENDCLASS.
 
-CLASS lcl_doc_generator DEFINITION FINAL.
-
-  PUBLIC SECTION.
-    METHODS add_text
-      IMPORTING
-        i_code TYPE stringtab.
-    TYPES: BEGIN OF page,
-             name  TYPE string,
-             title TYPE string,
-             text  TYPE stringtab,
-           END OF page.
-
-    DATA:
-            m_pages TYPE STANDARD TABLE OF page WITH KEY name READ-ONLY.
-  PROTECTED SECTION.
-
-  PRIVATE SECTION.
-    METHODS first_word
-      IMPORTING
-        i_chunk         TYPE rswsourcet
-      RETURNING
-        VALUE(r_result) TYPE string.
-
-ENDCLASS.
 
 CLASS lcl_doc_generator IMPLEMENTATION.
 
+  METHOD constructor.
+
+    me->mr_current_text = i_current_text.
+    me->mr_main_text    = i_current_text.
+
+  ENDMETHOD.
+
+
+  METHOD main_text.
+    mr_main_text = i_text.
+  ENDMETHOD.
 
   METHOD add_text.
+    DATA: name TYPE string.
     DATA(source) = CAST lif_parser( NEW lcl_tag_def_parser( NEW lcl_comment_parser( i_code ) ) ).
     DO.
       DATA(chunk) = source->next_chunk( ).
@@ -1263,21 +1323,80 @@ CLASS lcl_doc_generator IMPLEMENTATION.
       ENDIF.
       CASE chunk[ 1 ].
         WHEN '@page'.
-          DATA(name) = first_word( chunk ).
-          APPEND VALUE #( ) TO m_pages.
+          chunk = source->next_chunk( ).
+          name = first_word( CHANGING c_chunk = chunk ).
+          APPEND VALUE #( name = name ) TO m_pages REFERENCE INTO mr_current_page.
+          mr_current_page->title = chunk[ 1 ].
+          mr_current_text = REF #( mr_current_page->text ).
+          DELETE chunk INDEX 1.
+          APPEND LINES OF chunk TO mr_current_text->*.
+          CLEAR mr_current_section.
+        WHEN '@section'.
+          chunk = source->next_chunk( ).
+          name = first_word( CHANGING c_chunk = chunk ).
+          ASSERT mr_current_page IS BOUND.
+          APPEND VALUE #( name = name ) TO mr_current_page->sections REFERENCE INTO mr_current_section.
+          mr_current_text = REF #( mr_current_section->text ).
+          mr_current_section->title = chunk[ 1 ].
+          DELETE chunk INDEX 1.
+          APPEND LINES OF chunk TO mr_current_text->*.
+        WHEN '@subsection'.
+          chunk = source->next_chunk( ).
+          name = first_word( CHANGING c_chunk = chunk ).
+          ASSERT mr_current_section IS BOUND.
+          APPEND VALUE #( name = name ) TO mr_current_section->subsections REFERENCE INTO DATA(lr_subsection).
+          lr_subsection->title = chunk[ 1 ].
+          DELETE chunk INDEX 1.
+          mr_current_text = REF #( lr_subsection->text ).
+          APPEND LINES OF chunk TO mr_current_text->*.
+        WHEN '@@c'. " end of comment chunk is automatically end of pages and sections.
+          CLEAR mr_current_page.
+          CLEAR mr_current_section.
+          mr_current_text = mr_main_text.
+        WHEN OTHERS.
+          APPEND LINES OF chunk TO mr_current_text->*.
       ENDCASE.
     ENDDO.
   ENDMETHOD.
 
 
   METHOD first_word.
-    IF i_chunk IS NOT INITIAL.
-      DATA(x) = xsdbool( i_chunk[ 1 ] CA space ).
+    IF c_chunk IS NOT INITIAL.
+      DATA(x) = xsdbool( c_chunk[ 1 ] CA space ).
       DATA(idx) = sy-fdpos.
-      DATA(left) = substring( val = i_chunk[ 1 ] len = sy-fdpos ).
-      DATA(right) = substring(  val = i_chunk[ 1 ] off = sy-fdpos + 1 ).
+      DATA(left) = substring( val = c_chunk[ 1 ] len = idx ).
+      IF strlen( c_chunk[ 1 ] ) > idx.
+        DATA(right) = substring(  val = c_chunk[ 1 ] off = idx + 1 ).
+        c_chunk[ 1 ] = right.
+      ENDIF.
       r_result = left.
     ENDIF.
+  ENDMETHOD.
+
+
+  METHOD generate_markdown.
+    DATA: page       TYPE lcl_doc_generator=>page,
+          section    TYPE lcl_doc_generator=>section,
+          subsection TYPE lcl_doc_generator=>subsection.
+    DATA(gen) = CAST lif_text_generator( NEW lcl_markdown( ) ).
+
+    LOOP AT m_pages INTO page.
+      gen->heading(   iv_level = 1
+                      iv_text  = page-title
+        )->text( page-text ).
+      LOOP AT page-sections INTO section.
+        gen->heading(   iv_level = 2
+                        iv_text  = section-title
+          )->text( page-text ).
+        LOOP AT section-subsections INTO subsection.
+          gen->heading(   iv_level = 3
+                          iv_text  = subsection-title
+            )->text( page-text ).
+        ENDLOOP.
+      ENDLOOP.
+    ENDLOOP.
+
+    APPEND LINES OF gen->result( ) TO ct_text.
   ENDMETHOD.
 
 ENDCLASS.

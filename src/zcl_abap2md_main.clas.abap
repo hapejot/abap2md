@@ -11,21 +11,29 @@ CLASS zcl_abap2md_main DEFINITION
 */
 
   PUBLIC SECTION.
+    TYPES:
+             obj_name TYPE tadir-obj_name.
     METHODS generate_single
       IMPORTING
-        !iv_name       TYPE seoclname
+        !iv_name       TYPE obj_name
       RETURNING
         VALUE(rt_text) TYPE stringtab
       RAISING
         zcx_abap2md_error .
-    METHODS generate_multiple .
+    METHODS generate_multiple
+      RETURNING
+        VALUE(r_text) TYPE stringtab.
+    METHODS add
+      IMPORTING
+        i_name TYPE obj_name.
   PROTECTED SECTION.
   PRIVATE SECTION.
+    DATA mt_names TYPE STANDARD TABLE OF obj_name WITH DEFAULT KEY.
 
 
     METHODS read_object_info
       IMPORTING
-        iv_name         TYPE seoclname
+        iv_name         TYPE obj_name
       RETURNING
         VALUE(r_result) TYPE REF TO lif_info.
 ENDCLASS.
@@ -35,6 +43,37 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
 
 
   METHOD generate_multiple.
+**/
+* generate documentation from a list of dev objects.
+* before this can be run the object needs to be created and dev objects
+* have to be added using the *add* method.
+*
+* @return a complete markdown text with all documented components.
+*/
+    DATA: name  TYPE obj_name,
+          infos TYPE STANDARD TABLE OF REF TO lif_info.
+    DATA(main_gen) = NEW lcl_doc_generator( REF #( r_text ) ).
+    LOOP AT mt_names INTO name.
+      TRY.
+          DATA(lo_info) = read_object_info( name ).
+          IF lo_info IS BOUND.
+            lo_info->read_main( ).
+            lo_info->build_doc_structure( main_gen ).
+            APPEND lo_info TO infos.
+          ENDIF.
+        CATCH zcx_abap2md_error.
+          ASSERT 1 = 0.
+      ENDTRY.
+    ENDLOOP.
+    TRY.
+        main_gen->generate_markdown( CHANGING ct_text = r_text ).
+        LOOP AT infos INTO lo_info.
+          APPEND INITIAL LINE TO r_text.
+          lo_info->generate_markdown( CHANGING ct_text = r_text ).
+        ENDLOOP.
+      CATCH zcx_abap2md_error.
+        ASSERT 1 = 0.
+    ENDTRY.
   ENDMETHOD.
 
 
@@ -67,6 +106,11 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
     IF r_result IS INITIAL.
       r_result = lcl_program_info=>try_read( to_upper( iv_name ) ).
     ENDIF.
+  ENDMETHOD.
+
+
+  METHOD add.
+    APPEND i_name TO mt_names.
   ENDMETHOD.
 
 ENDCLASS.

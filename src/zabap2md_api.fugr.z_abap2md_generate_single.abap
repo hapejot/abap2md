@@ -2,7 +2,7 @@ FUNCTION z_abap2md_generate_single.
 *"----------------------------------------------------------------------
 *"*"Local Interface:
 *"  IMPORTING
-*"     VALUE(IV_NAME) TYPE  SEOCLNAME
+*"     VALUE(IV_NAME) TYPE  TADIR-OBJ_NAME
 *"  EXPORTING
 *"     VALUE(ET_DOC) TYPE  STRINGTAB
 *"----------------------------------------------------------------------

@@ -9,13 +9,41 @@
    </INCLUDES>
    <FUNCTIONS>
     <item>
+     <FUNCNAME>Z_ABAP2MD_GENERATE_MULTI</FUNCNAME>
+     <REMOTE_CALL>R</REMOTE_CALL>
+     <SHORT_TEXT>Generate an md document for a single object</SHORT_TEXT>
+     <IMPORT>
+      <RSIMP>
+       <PARAMETER>IT_NAMES</PARAMETER>
+       <TYP>ZABAP2MD_OBJECT_NAMES</TYP>
+      </RSIMP>
+     </IMPORT>
+     <EXPORT>
+      <RSEXP>
+       <PARAMETER>ET_DOC</PARAMETER>
+       <TYP>STRINGTAB</TYP>
+      </RSEXP>
+     </EXPORT>
+     <DOCUMENTATION>
+      <RSFDO>
+       <PARAMETER>IT_NAMES</PARAMETER>
+       <KIND>P</KIND>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>ET_DOC</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Table with Strings</STEXT>
+      </RSFDO>
+     </DOCUMENTATION>
+    </item>
+    <item>
      <FUNCNAME>Z_ABAP2MD_GENERATE_SINGLE</FUNCNAME>
      <REMOTE_CALL>R</REMOTE_CALL>
      <SHORT_TEXT>Generate an md document for a single object</SHORT_TEXT>
      <IMPORT>
       <RSIMP>
        <PARAMETER>IV_NAME</PARAMETER>
-       <TYP>SEOCLNAME</TYP>
+       <TYP>TADIR-OBJ_NAME</TYP>
       </RSIMP>
      </IMPORT>
      <EXPORT>
