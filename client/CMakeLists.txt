@@ -18,4 +18,7 @@ add_compile_options( -g -save-temps )
 add_executable(z_abap2md_generate_single z_abap2md_generate_single.c)
 target_link_libraries(z_abap2md_generate_single   ${SAPNWRFC_LIBRARIES})
 
+add_executable(z_abap2md_generate_multi z_abap2md_generate_multi.c)
+target_link_libraries(z_abap2md_generate_multi   ${SAPNWRFC_LIBRARIES})
+
 

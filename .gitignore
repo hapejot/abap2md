@@ -1,0 +1,9 @@
+*.swp
+*.log
+~*
+rfc*.trc
+sapnwrfc.ini
+bin
+*.docx
+doc.idx
+*.pdf
