@@ -9,8 +9,14 @@
 */
 
 **/
-* @page p2 Testpage
-* The test page contains only dummy text.
+* @page p2 Why using this style of documentation?
+* There exists already  a style named abapdoc for documentation
+* It has some drawbacks:
+*   1. it only documents parts of classes
+*   2. the documentation has to be on the header so in SE24 this is invisible
+*   3. since the documentation is in the header, whenever the body is changed
+*      the documentation in the header will likely be forgotten to be updated.
+*
 * @section s1 First Section
 * The text is part of the first section.
 */
