@@ -17,3 +17,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }} 
           output: 
       - run: cat CHANGELOG.md
+      - run: git status
