@@ -1,3 +1,6 @@
+/**
+* @brief calling the remote function module for generating the documentation.
+*/
 #include <stdlib.h>
 #include <stdio.h>
 #include <sapnwrfc.h>
