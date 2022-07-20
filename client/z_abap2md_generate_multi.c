@@ -1,5 +1,8 @@
 /**
 * @brief calling the remote function module for generating the documentation.
+* The details of the RFC destination is maintained in the saprfc.ini file.
+* In this file more than one destination can be defined. The first parameter
+* of this commands names this destination. The names are case sensitive.
 */
 #include <stdlib.h>
 #include <stdio.h>
