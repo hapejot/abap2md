@@ -22,7 +22,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }} 
           output: 
       - run: |
-          echo ${{ steps.changes.outputs.changelog })
+          echo ${{ steps.changes.outputs.changelog }}
           cat CHANGELOG.md
           git add --all
           git status
