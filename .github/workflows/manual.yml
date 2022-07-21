@@ -24,6 +24,7 @@ jobs:
       - run: |
           echo '${{ steps.changes.outputs.changelog }}'
           cat CHANGELOG.md
+          git config --user.name Peter Jaeckel --user.email peter@hapetech.de
           git add --all
           git status
           git commit --amend 
