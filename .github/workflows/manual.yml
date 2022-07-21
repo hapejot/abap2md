@@ -1,7 +1,5 @@
 name: Generate Changelog manually
-on: 
-  workflow_dispatch:
-    inputs:
+on: workflow_dispatch
 jobs:
   changelog:
     runs-on: ubuntu-latest
@@ -25,7 +23,7 @@ jobs:
           git status
           git commit --amend --no-edit
       - name: Push changes
-          uses: ad-m/github-push-action@master
-          with:
-            github_token: ${{ secrets.GITHUB_TOKEN }}
-            branch: ${{ github.ref }}
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
