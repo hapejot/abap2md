@@ -15,14 +15,10 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }} 
           output: 
       - run: |
-          echo '${{ steps.changes.outputs.changelog }}'
-          cat CHANGELOG.md
           git config user.name "Peter Jaeckel" 
           git config user.email "peter@hapetech.de"
           git add CHANGELOG.md
-          git status
-          git commit --amend --no-edit
-          git pull --ff-only
+          git commit -m 'Changelog automatically updated'
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
