@@ -16,7 +16,9 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }} 
           output: 
-      - run: |
+      - with:
+          token: ${{ secrets.GITHUB_TOKEN }} 
+        run: |
           echo '${{ steps.changes.outputs.changelog }}'
           cat CHANGELOG.md
           git config user.name "Peter Jaeckel" 
