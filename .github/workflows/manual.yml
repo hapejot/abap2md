@@ -29,3 +29,4 @@ jobs:
           git add CHANGELOG.md
           git status
           git commit --amend --no-edit
+          git push origin
