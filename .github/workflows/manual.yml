@@ -1,5 +1,7 @@
 name: Generate Changelog manually
-on: workflow_dispatch
+on: 
+  workflow_dispatch:
+    inputs:
 jobs:
   changelog:
     runs-on: ubuntu-latest
