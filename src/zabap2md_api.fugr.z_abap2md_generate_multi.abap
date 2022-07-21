@@ -6,6 +6,13 @@ FUNCTION z_abap2md_generate_multi.
 *"  EXPORTING
 *"     VALUE(ET_DOC) TYPE  STRINGTAB
 *"----------------------------------------------------------------------
+**/
+* FM
+* Generating the documentation for several sources into one result
+* document.
+* @param it_names   gives the list of dev objects to be taken into concideration
+* @param et_doc     is the resulting documentation as markdown text, line by line
+*/
 
   TRY.
 

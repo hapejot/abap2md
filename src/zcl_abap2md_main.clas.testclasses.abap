@@ -214,7 +214,7 @@ ENDCLASS.
 CLASS ltcl_markdown IMPLEMENTATION.
 
   METHOD second_heading.
-    DATA(cut) = CAST lif_text_generator( NEW lcl_markdown( ) ).
+    DATA(cut) = CAST zif_abap2md_text_generator( NEW lcl_markdown( ) ).
     cl_abap_unit_assert=>assert_bound( cut ).
     cut->heading(
             iv_level = 1
@@ -264,7 +264,7 @@ CLASS ltcl_markdown IMPLEMENTATION.
     sample_table = VALUE #( ( no = 1 name = 'Peter' value = 'Was auch immer' )
                             ( no = 2 name = 'Karin' value = 'Krank' ) ).
 
-    DATA(cut) = CAST lif_text_generator( NEW lcl_markdown( ) ).
+    DATA(cut) = CAST zif_abap2md_text_generator( NEW lcl_markdown( ) ).
     cl_abap_unit_assert=>assert_bound( cut ).
     DATA(code) = VALUE stringtab(
             ( `PUBLIC METHOD CONSTRUCTOR` )

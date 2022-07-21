@@ -35,11 +35,17 @@ CLASS zcl_abap2md_main DEFINITION
       IMPORTING
         iv_name         TYPE obj_name
       RETURNING
-        VALUE(r_result) TYPE REF TO lif_info.
+        VALUE(r_result) TYPE REF TO zif_abap2md_info.
 ENDCLASS.
 
 
+
 CLASS zcl_abap2md_main IMPLEMENTATION.
+
+
+  METHOD add.
+    APPEND i_name TO mt_names.
+  ENDMETHOD.
 
 
   METHOD generate_multiple.
@@ -51,8 +57,8 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
 * @return a complete markdown text with all documented components.
 */
     DATA: name  TYPE obj_name,
-          infos TYPE STANDARD TABLE OF REF TO lif_info.
-    DATA(main_gen) = NEW lcl_doc_generator( REF #( r_text ) ).
+          infos TYPE STANDARD TABLE OF REF TO zif_abap2md_info.
+    DATA(main_gen) = NEW zcl_abap2md_doc_generator( REF #( r_text ) ).
     LOOP AT mt_names INTO name.
       TRY.
           DATA(lo_info) = read_object_info( name ).
@@ -102,15 +108,12 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
 * first try is as a class name.
 * @param iv_name name of the object
 */
-    r_result = lcl_class_info=>try_read( CONV #( to_upper( iv_name ) ) ).
+    r_result = zcl_abap2md_class_info=>try_read( CONV #( to_upper( iv_name ) ) ).
     IF r_result IS INITIAL.
       r_result = lcl_program_info=>try_read( to_upper( iv_name ) ).
     ENDIF.
+    IF r_result IS INITIAL.
+      r_result = zcl_abap2md_function_info=>try_read( to_upper( iv_name ) ).
+    ENDIF.
   ENDMETHOD.
-
-
-  METHOD add.
-    APPEND i_name TO mt_names.
-  ENDMETHOD.
-
 ENDCLASS.
