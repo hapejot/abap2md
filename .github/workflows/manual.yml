@@ -26,6 +26,6 @@ jobs:
           cat CHANGELOG.md
           git config user.name "Peter Jaeckel" 
           git config user.email "peter@hapetech.de"
-          git add --all
+          git add CHANGELOG.md
           git status
-          git commit --amend -C head
+          git commit --amend --no-edit
