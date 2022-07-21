@@ -1,9 +1,8 @@
-xxxx----
 # Changelog
 
-## [Unreleased](https://github.com/hapejot/abap2md/tree/HEAD)
+## [V1.0.2](https://github.com/hapejot/abap2md/tree/V1.0.2) (2022-07-21)
 
-[Full Changelog](https://github.com/hapejot/abap2md/compare/V1.0.1...HEAD)
+[Full Changelog](https://github.com/hapejot/abap2md/compare/V1.0.1...V1.0.2)
 
 Test for release [\#4](https://github.com/hapejot/abap2md/issues/4)
 
