@@ -28,4 +28,4 @@ jobs:
           git config user.email "peter@hapetech.de"
           git add --all
           git status
-          git commit --amend 
+          git commit --amend -C head
