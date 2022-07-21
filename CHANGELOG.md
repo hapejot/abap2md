@@ -1,4 +1,4 @@
-xxxx
+xxxx----
 # Changelog
 
 ## [Unreleased](https://github.com/hapejot/abap2md/tree/HEAD)
