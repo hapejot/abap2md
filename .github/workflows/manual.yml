@@ -16,9 +16,14 @@ jobs:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.ref }}
       - name: "✏️ Generate release changelog"
+        id: changes
         uses: heinrichreimer/github-changelog-generator-action@v2.3
         with:
           token: ${{ secrets.GITHUB_TOKEN }} 
           output: 
-      - run: cat CHANGELOG.md
-      - run: git status
+      - run: |
+          echo ${{ steps.changes.outputs.changelog })
+          cat CHANGELOG.md
+          git add --all
+          git status
+          git commit --amend 
