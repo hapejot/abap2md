@@ -22,6 +22,7 @@ jobs:
           git add CHANGELOG.md
           git status
           git commit --amend --no-edit
+          git pull
       - name: Push changes
         uses: ad-m/github-push-action@master
         with:
