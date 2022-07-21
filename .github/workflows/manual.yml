@@ -16,9 +16,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }} 
           output: 
-      - with:
-          token: ${{ secrets.GITHUB_TOKEN }} 
-        run: |
+      - run: |
           echo '${{ steps.changes.outputs.changelog }}'
           cat CHANGELOG.md
           git config user.name "Peter Jaeckel" 
@@ -26,4 +24,8 @@ jobs:
           git add CHANGELOG.md
           git status
           git commit --amend --no-edit
-          git push origin
+      - name: Push changes
+          uses: ad-m/github-push-action@master
+          with:
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+            branch: ${{ github.ref }}
