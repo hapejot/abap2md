@@ -12,5 +12,4 @@ INTERFACE zif_abap2md_info
       ct_text TYPE rswsourcet
     RAISING
       zcx_abap2md_error.
-
 ENDINTERFACE.

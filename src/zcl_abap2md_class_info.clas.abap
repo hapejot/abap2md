@@ -19,40 +19,40 @@ CLASS zcl_abap2md_class_info DEFINITION
 
   PRIVATE SECTION.
 
-    TYPES: BEGIN OF class_descr,
-             class_name TYPE seoclsname,
-             brief      TYPE string,
-           END OF class_descr.
-    TYPES class_descr_t TYPE STANDARD TABLE OF class_descr.
-
-    TYPES: BEGIN OF parameter_info,
-             parameter_name TYPE seocmpname,
-             direction      TYPE char20,
-             typ_type       TYPE seotyptype,
-             data_type      TYPE rs38l_typ,
-             description    TYPE rswsourcet,
-           END OF parameter_info.
-    TYPES parameter_info_t TYPE STANDARD TABLE OF parameter_info WITH EMPTY KEY.
-    TYPES: BEGIN OF exception_info,
-             exception_name TYPE seoclsname,
-             data_type      TYPE rs38l_typ,
-             description    TYPE rswsourcet,
-           END OF exception_info.
-    TYPES exception_info_t TYPE STANDARD TABLE OF exception_info WITH EMPTY KEY.
-    TYPES: BEGIN OF method_info,
-             method_name     TYPE seocpdname,
-             docu_style      TYPE char10,
-             exposure        TYPE seoexpose,
-             abstract        TYPE char1,
-             redefined       TYPE char1,
-             static          TYPE char1,
-             brief           TYPE rswsourcet,
-             description     TYPE rswsourcet,
-             return_info     TYPE parameter_info,
-             parameter_infos TYPE parameter_info_t,
-             exception_infos TYPE exception_info_t,
-           END OF method_info.
-    TYPES method_info_t TYPE STANDARD TABLE OF method_info.
+*    TYPES: BEGIN OF class_descr,
+*             class_name TYPE seoclsname,
+*             brief      TYPE string,
+*           END OF class_descr.
+*    TYPES class_descr_t TYPE STANDARD TABLE OF class_descr.
+*
+*    TYPES: BEGIN OF parameter_info,
+*             parameter_name TYPE seocmpname,
+*             direction      TYPE char20,
+*             typ_type       TYPE seotyptype,
+*             data_type      TYPE rs38l_typ,
+*             description    TYPE rswsourcet,
+*           END OF parameter_info.
+*    TYPES parameter_info_t TYPE STANDARD TABLE OF parameter_info WITH EMPTY KEY.
+*    TYPES: BEGIN OF exception_info,
+*             exception_name TYPE seoclsname,
+*             data_type      TYPE rs38l_typ,
+*             description    TYPE rswsourcet,
+*           END OF exception_info.
+*    TYPES exception_info_t TYPE STANDARD TABLE OF exception_info WITH EMPTY KEY.
+*    TYPES: BEGIN OF method_info,
+*             method_name     TYPE seocpdname,
+*             docu_style      TYPE char10,
+*             exposure        TYPE seoexpose,
+*             abstract        TYPE char1,
+*             redefined       TYPE char1,
+*             static          TYPE char1,
+*             brief           TYPE rswsourcet,
+*             description     TYPE rswsourcet,
+*             return_info     TYPE parameter_info,
+*             parameter_infos TYPE parameter_info_t,
+*             exception_infos TYPE exception_info_t,
+*           END OF method_info.
+*    TYPES method_info_t TYPE STANDARD TABLE OF method_info.
 
 
     DATA ms_tadir TYPE tadir.
@@ -67,39 +67,40 @@ CLASS zcl_abap2md_class_info DEFINITION
           mt_sub_class_set            TYPE STANDARD TABLE OF vseoclif,
           mt_redefinition_set         TYPE seor_redefinitions_r.
 
-    DATA: BEGIN OF ms_class_docu_structure,
-            class_name     TYPE seoclsname,
-            exposure       TYPE seoexpose,
-            super_class    TYPE class_descr,
-            interfaces     TYPE class_descr_t,
-            friend_classes TYPE class_descr_t,
-            sub_classes    TYPE class_descr_t,
-            methods        TYPE method_info_t,
-            descr_found    TYPE crmt_boolean,
-            brief          TYPE rswsourcet,
-            description    TYPE rswsourcet,
-          END OF ms_class_docu_structure,
+*    DATA: BEGIN OF ms_class_docu_structure,
+*            class_name     TYPE seoclsname,
+*            exposure       TYPE seoexpose,
+*            super_class    TYPE class_descr,
+*            interfaces     TYPE class_descr_t,
+*            friend_classes TYPE class_descr_t,
+*            sub_classes    TYPE class_descr_t,
+*            methods        TYPE method_info_t,
+*            descr_found    TYPE crmt_boolean,
+*            brief          TYPE rswsourcet,
+*            description    TYPE rswsourcet,
+*          END OF ms_class_docu_structure,
+    DATA: mr_info          TYPE REF TO zabap2md_class_info,
           mv_class_include TYPE programm.
 
 
 
 
     METHODS:
-      write_out_param_dir       IMPORTING i_method TYPE method_info
+      write_out_param_dir       IMPORTING i_method TYPE zabap2md_method_info
                                           iv_dir   TYPE string
                                 CHANGING  ct_text  TYPE stringtab,
-      write_out_params          IMPORTING i_method       TYPE method_info
+      write_out_params          IMPORTING i_method       TYPE zabap2md_method_info
                                 RETURNING VALUE(rt_text) TYPE stringtab,
       parse_method_docu
         CHANGING
-          cs_method_info TYPE method_info.
+          cs_method_info TYPE zabap2md_method_info.
     METHODS write_definition
       IMPORTING
         i_description TYPE rswsourcet
       CHANGING
         i_out         TYPE stringtab.
-    METHODS build_class_info.
-    METHODS build_method_info.
+    METHODS build_class_info  IMPORTING i_gen  TYPE REF TO zif_abap2md_doc_generator OPTIONAL  .
+    METHODS build_method_info  IMPORTING i_gen  TYPE REF TO zif_abap2md_doc_generator OPTIONAL  .
     METHODS extract_word
       CHANGING
         text            TYPE rswsourcet
@@ -315,8 +316,6 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 * Sort methods
     SORT mt_method_set BY cmpname ASCENDING.  "exposure DESCENDING
 
-
-
 * Workaround: Put interface methods into method table
 * - remove alias definitions first in order to avoid duplicates
     DELETE mt_method_set WHERE alias = abap_true.
@@ -400,11 +399,11 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 
 
 * Build class info
-    build_class_info( ).
+    build_class_info( i_gen ).
 
 
 * Build method info
-    build_method_info( ).
+    build_method_info( i_gen ).
 
 
   ENDMETHOD.
@@ -413,46 +412,46 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 
     DATA(lo_markdown) = CAST zif_abap2md_text_generator( NEW zcl_abap2md_markdown( ) ).
 
-    lo_markdown->heading( iv_level = 1 iv_text = ms_class_docu_structure-class_name
-                )->text( ms_class_docu_structure-brief
+    lo_markdown->heading( iv_level = 1 iv_text = mr_info->name
+                )->text( mr_info->title
                 )->new_paragraph(
-                )->text( ms_class_docu_structure-description ).
+                )->text( mr_info->text ).
 
-    LOOP AT ms_class_docu_structure-methods INTO DATA(method).
+    LOOP AT mr_info->methods INTO DATA(method).
 
-      lo_markdown->heading( iv_level = 2 iv_text = method-method_name
+      lo_markdown->heading( iv_level = 2 iv_text = method-name
                   )->new_paragraph(
-                  )->text( method-brief
+                  )->text( method-title
                   )->new_paragraph(
-                  )->text( method-description
+                  )->text( method-text
                   )->new_paragraph(
-                  )->code( write_out_params( method )
+*                  )->code( write_out_params( method )
                   ).
 
-      LOOP AT method-parameter_infos INTO DATA(par).
-        IF par-description IS NOT INITIAL.
-          lo_markdown->definition(
-              iv_text = par-description
-              iv_def  = par-parameter_name
-          ).
-        ENDIF.
-      ENDLOOP.
-
-      IF method-return_info-description IS NOT INITIAL.
-        lo_markdown->definition(
-            iv_text = method-return_info-description
-            iv_def  = method-return_info-parameter_name
-        ).
-      ENDIF.
-
-      LOOP AT method-exception_infos INTO DATA(exc).
-        IF exc-description IS NOT INITIAL.
-          lo_markdown->definition(
-              iv_text = exc-description
-              iv_def  = exc-exception_name
-          ).
-        ENDIF.
-      ENDLOOP.
+*      LOOP AT method-parameter_infos INTO DATA(par).
+*        IF par-description IS NOT INITIAL.
+*          lo_markdown->definition(
+*              iv_text = par-description
+*              iv_def  = par-parameter_name
+*          ).
+*        ENDIF.
+*      ENDLOOP.
+*
+*      IF method-return_info-description IS NOT INITIAL.
+*        lo_markdown->definition(
+*            iv_text = method-return_info-description
+*            iv_def  = method-return_info-parameter_name
+*        ).
+*      ENDIF.
+*
+*      LOOP AT method-exception_infos INTO DATA(exc).
+*        IF exc-description IS NOT INITIAL.
+*          lo_markdown->definition(
+*              iv_text = exc-description
+*              iv_def  = exc-exception_name
+*          ).
+*        ENDIF.
+*      ENDLOOP.
 
     ENDLOOP.
 
@@ -467,8 +466,7 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 * @param ct_text output is appended to this.
 * @param i_method info structure describing the method.
 */
-    DATA: par TYPE parameter_info,
-          hd  TYPE stringtab.
+    DATA: hd  TYPE stringtab.
 
     IF abap_true = i_method-static.
       APPEND `STATIC` TO hd.
@@ -482,7 +480,7 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
         APPEND `PUBLIC`       TO hd.
     ENDCASE.
     APPEND `METHOD` TO hd.
-    APPEND i_method-method_name TO hd.
+    APPEND i_method-name TO hd.
     CONCATENATE LINES OF hd INTO DATA(line) SEPARATED BY space.
     APPEND  line TO rt_text.
 
@@ -506,10 +504,10 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
                             iv_dir   = 'RETURNING'
                           CHANGING
                             ct_text = rt_text ).
-    IF i_method-return_info IS NOT INITIAL.
+    IF i_method-returns IS NOT INITIAL.
       APPEND |    RETURNING| TO rt_text.
-      DATA(val_str) = |VALUE({ i_method-return_info-parameter_name })|.
-      APPEND |        { val_str  WIDTH = 35 } TYPE { i_method-return_info-data_type }| TO rt_text.
+      DATA(val_str) = |VALUE({ i_method-returns-name })|.
+      APPEND |        { val_str  WIDTH = 35 } TYPE { i_method-returns-data_type }| TO rt_text.
     ENDIF.
 
 
@@ -519,12 +517,12 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 
   METHOD write_out_param_dir.
     DATA(lv_first) = abap_true.
-    LOOP AT i_method-parameter_infos INTO DATA(par) WHERE direction = iv_dir.
+    LOOP AT i_method-params INTO DATA(par) WHERE direction = iv_dir.
       IF lv_first = abap_true.
         APPEND |    { iv_dir }| TO ct_text.
         CLEAR lv_first.
       ENDIF.
-      APPEND |        { par-parameter_name  WIDTH = 35 } TYPE { par-data_type }| TO ct_text.
+      APPEND |        { par-name  WIDTH = 35 } TYPE { par-data_type }| TO ct_text.
     ENDLOOP.
   ENDMETHOD.
 
@@ -540,46 +538,48 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 *
 */
     DATA: lt_source               TYPE rswsourcet,
-          ls_class_descr          TYPE class_descr,
+          ls_class_descr          TYPE zabap2md_common_info,
           ls_class_interface_info TYPE rpyclci.
+
+    DATA(doc) = i_gen->doc( ).
 
     ls_class_interface_info = mt_class_interface_info_set[ 1 ].
 
-    ms_class_docu_structure-class_name = ls_class_interface_info-clsname.
+    APPEND VALUE #( name = ls_class_interface_info-clsname ) TO doc->classes REFERENCE INTO mr_info.
 
-    ms_class_docu_structure-brief = VALUE #( ( CONV #( ls_class_interface_info-descript ) ) ).
+    mr_info->title = ls_class_interface_info-descript.
 
-    ms_class_docu_structure-exposure = ls_class_interface_info-exposure.
+    mr_info->exposure = ls_class_interface_info-exposure.
 
 
 * Super class
     READ TABLE mt_meta_relation_set
       INTO DATA(ls_meta_relation)
       WITH KEY reltype = '2'.
-    ms_class_docu_structure-super_class = VALUE #( class_name = ls_meta_relation-refclsname ) .
+    mr_info->super_class = VALUE #( name = ls_meta_relation-refclsname ) .
 
 
 * Interfaces
     LOOP AT mt_meta_relation_set INTO ls_meta_relation WHERE reltype = '1'.
       CLEAR ls_class_descr.
-      ls_class_descr-class_name = ls_meta_relation-refclsname.
-      APPEND ls_class_descr TO ms_class_docu_structure-interfaces.
+      ls_class_descr-name = ls_meta_relation-refclsname.
+      APPEND ls_class_descr TO mr_info->interfaces.
     ENDLOOP.
 
 
 * Friends
     LOOP AT mt_friends_relation_set INTO DATA(ls_friend).
       CLEAR ls_class_descr.
-      ls_class_descr-class_name = ls_friend-refclsname.
-      APPEND ls_class_descr TO ms_class_docu_structure-friend_classes.
+      ls_class_descr-name = ls_friend-refclsname.
+      APPEND ls_class_descr TO mr_info->friend_classes.
     ENDLOOP.
 
 
 * Sub classes
     LOOP AT mt_sub_class_set INTO DATA(ls_sub_class).
       CLEAR ls_class_descr.
-      ls_class_descr-class_name = ls_sub_class-clsname.
-      APPEND ls_class_descr TO ms_class_docu_structure-sub_classes.
+      ls_class_descr-name = ls_sub_class-clsname.
+      APPEND ls_class_descr TO mr_info->sub_classes.
     ENDLOOP.
 
 
@@ -595,7 +595,7 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
         EXIT.
       ENDIF.
 
-      ms_class_docu_structure-description = chunk.
+      mr_info->text = chunk.
 
     ENDDO.
 
@@ -610,48 +610,48 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 */
 
     DATA lt_source            TYPE rswsourcet.
-    DATA lv_source            TYPE string.
-    DATA ls_parameter_info    TYPE parameter_info.
-    DATA ls_exception_info    TYPE exception_info.
-    DATA ls_method_info       TYPE method_info.
+    DATA ls_parameter_info    TYPE zabap2md_param.
+    DATA ls_exception_info    TYPE zabap2md_common_info.
     DATA lv_cpdname           TYPE seocpdname.
-    DATA lv_coding_started    TYPE abap_bool.
-    DATA lv_c1                TYPE c.
+    DATA: lr_meth TYPE REF TO zabap2md_method_info.
 
 
 * Get header docu of all methods
     LOOP AT mt_method_set INTO DATA(ls_method).
 
-      CLEAR ls_method_info.
+      APPEND INITIAL LINE TO mr_info->methods REFERENCE INTO lr_meth.
+
       REFRESH lt_source.
 
 *   Create composite component name (for interface methods)
-      IF ls_method-refclsname CP 'ZIF*' OR ls_method-refclsname CP 'IF*'.
+*      IF ls_method-refclsname CP 'ZIF*' OR ls_method-refclsname CP 'IF*'.
+      IF ls_method-refclsname IS NOT INITIAL.
+
         CONCATENATE ls_method-refclsname '~' ls_method-cmpname INTO lv_cpdname.
       ELSE.
         lv_cpdname = ls_method-cmpname.
       ENDIF.
-      ls_method_info-method_name = lv_cpdname.
+      lr_meth->name = lv_cpdname.
 
 
-      ls_method_info-exposure = ls_method-exposure.
-      ls_method_info-redefined = ls_method-redefin.
+      lr_meth->exposure = ls_method-exposure.
+      lr_meth->redefined = ls_method-redefin.
 
       IF ls_method-mtddecltyp = '1'.
-        ls_method_info-static = abap_true.
+        lr_meth->static = abap_true.
       ENDIF.
 
       DATA(ls_method_include)  = VALUE #( mt_method_include_set[ cpdkey-cpdname = lv_cpdname ] OPTIONAL ).
 
 *   No method include -> abstract
       IF ls_method_include IS INITIAL.
-        ls_method_info-abstract = abap_true.
+        lr_meth->abstract = abap_true.
       ENDIF.
 
 
 
       IF ls_method-descript IS NOT INITIAL.
-        ls_method_info-brief = VALUE #( ( CONV #( ls_method-descript ) ) ).
+        lr_meth->text = VALUE #( ( CONV #( ls_method-descript ) ) ).
       ENDIF.
 
 *   Create tag infos for parameters/returns
@@ -670,12 +670,12 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
           WHEN '3'.
 *          no direction
         ENDCASE.
-        ls_parameter_info-parameter_name = ls_parameter-sconame.
+        ls_parameter_info-name = ls_parameter-sconame.
         ls_parameter_info-data_type  = ls_parameter-type.
         IF ls_parameter-pardecltyp = 3.
-          ls_method_info-return_info = ls_parameter_info.
+          lr_meth->returns = ls_parameter_info.
         ELSE.
-          APPEND ls_parameter_info TO ls_method_info-parameter_infos.
+          APPEND ls_parameter_info TO lr_meth->params.
         ENDIF.
 
       ENDLOOP.
@@ -687,15 +687,15 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 
 *     Add tag per parameter
         CLEAR ls_exception_info.
-        ls_exception_info-exception_name = ls_exception-sconame.
-        ls_exception_info-data_type      = ls_exception-sconame.
-        APPEND ls_exception_info TO ls_method_info-exception_infos.
+        ls_exception_info-name = ls_exception-sconame.
+*        ls_exception_info-data_type      = ls_exception-sconame.
+        APPEND ls_exception_info TO lr_meth->exceptions.
 
       ENDLOOP.
 
 
 *   Get source code
-      IF ls_method_info-abstract = abap_false.
+      IF lr_meth->abstract = abap_false.
         READ REPORT ls_method_include-incname
           INTO lt_source.
       ENDIF.
@@ -703,20 +703,20 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 
 *   Parse docu
       IF lt_source IS NOT INITIAL.
-        ls_method_info-description = lt_source.
-        parse_method_docu( CHANGING cs_method_info = ls_method_info ).
+        lr_meth->text = lt_source.
+        parse_method_docu( CHANGING cs_method_info = lr_meth->* ).
       ENDIF.
 
 
-      APPEND ls_method_info TO ms_class_docu_structure-methods.
+*      APPEND ls_method_info TO ms_class_docu_structure-methods.
 
     ENDLOOP.
 
 * Raise message for missing class description
-    IF ms_class_docu_structure-descr_found = abap_false.
+*    IF ms_class_docu_structure-descr_found = abap_false.
 *   Raise message
 *      add_message_symsg( ).
-    ENDIF.
+*    ENDIF.
 
 
   ENDMETHOD.
@@ -731,16 +731,16 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 */
 
 
-    DATA ls_parameter_info              TYPE parameter_info.
-    DATA ls_exception_info              TYPE exception_info.
+    DATA ls_parameter_info              TYPE zabap2md_param.
+    DATA ls_exception_info              TYPE zabap2md_common_info.
     DATA lv_tag_value                   TYPE name_komp.
-    FIELD-SYMBOLS <fs_parameter_info>     TYPE parameter_info.
-    FIELD-SYMBOLS <fs_exception_info>     TYPE exception_info.
+    FIELD-SYMBOLS <fs_parameter_info>     TYPE zabap2md_param.
+    FIELD-SYMBOLS <fs_exception_info>     TYPE zabap2md_common_info.
     FIELD-SYMBOLS <ft_description>  TYPE rswsourcet.
 
-    DATA(tokens) = CAST zif_abap2md_parser( NEW zcl_abap2md_tag_def_parser( NEW zcl_abap2md_comment_parser( cs_method_info-description ) ) ).
+    DATA(tokens) = CAST zif_abap2md_parser( NEW zcl_abap2md_tag_def_parser( NEW zcl_abap2md_comment_parser( cs_method_info-text ) ) ).
 
-    CLEAR cs_method_info-description[].
+    CLEAR cs_method_info-text[].
 
 * Scan for tags
     DO.
@@ -757,45 +757,45 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 
 *     Returning docu
         WHEN '@RETURN'.
-          cs_method_info-return_info-description = tokens->next_chunk( ).
+          cs_method_info-returns-text = tokens->next_chunk( ).
 
 *     Parameter docu
         WHEN '@PARAM'.
           chunk = tokens->next_chunk( ).
           lv_tag_value = to_upper( extract_word( CHANGING text = chunk ) ).
 *       Get parameter info
-          READ TABLE cs_method_info-parameter_infos ASSIGNING <fs_parameter_info>
-                WITH KEY parameter_name = lv_tag_value.
+          READ TABLE cs_method_info-params ASSIGNING <fs_parameter_info>
+                WITH KEY name = lv_tag_value.
           IF sy-subrc IS NOT INITIAL.
             CLEAR ls_parameter_info.
-            ls_parameter_info-parameter_name = lv_tag_value.
+            ls_parameter_info-name = lv_tag_value.
             ls_parameter_info-direction      = 'UNKNOWN'.
-            APPEND ls_parameter_info TO cs_method_info-parameter_infos ASSIGNING <fs_parameter_info>.
+            APPEND ls_parameter_info TO cs_method_info-params ASSIGNING <fs_parameter_info>.
 *            add_message_symsg( ).
           ENDIF.
 
-          <fs_parameter_info>-description = chunk.
+          <fs_parameter_info>-text = chunk.
 
 *     Exception docu
         WHEN '@EXCEPTION' OR '@THROWS' OR '@RAISING'.
           chunk = tokens->next_chunk( ).
           lv_tag_value = to_upper( extract_word( CHANGING text = chunk ) ).
 
-          READ TABLE cs_method_info-exception_infos ASSIGNING <fs_exception_info>
-                    WITH KEY exception_name = lv_tag_value.
+          READ TABLE cs_method_info-exceptions ASSIGNING <fs_exception_info>
+                    WITH KEY name = lv_tag_value.
 
           IF sy-subrc IS NOT INITIAL.
             CLEAR ls_exception_info.
-            ls_exception_info-exception_name = lv_tag_value.
-            APPEND ls_exception_info TO cs_method_info-exception_infos ASSIGNING <fs_exception_info>.
+            ls_exception_info-name = lv_tag_value.
+            APPEND ls_exception_info TO cs_method_info-exceptions ASSIGNING <fs_exception_info>.
 *            add_message_symsg( ).
           ENDIF.
 
-          <fs_exception_info>-description = chunk.
+          <fs_exception_info>-text = chunk.
 
         WHEN OTHERS.
-          IF cs_method_info-description IS INITIAL.
-            cs_method_info-description = chunk.
+          IF cs_method_info-text IS INITIAL.
+            cs_method_info-text = chunk.
           ENDIF.
       ENDCASE.
 

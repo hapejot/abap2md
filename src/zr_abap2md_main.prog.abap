@@ -9,10 +9,28 @@
 */
 
 **/
-* @page p2 Testpage
-* The test page contains only dummy text.
-* @section s1 First Section
-* The text is part of the first section.
+* @page p2 General procedure of document setup
+* The program is flexible but follows a fixed procedure to create the documentation
+* There are basically three phases: reading object info, parsing comments, output markdown
+*
+* @section s1 Reading Objects
+*
+* In the initial phase the program is gathering lots of informations from the system
+* but only some meta data is read. The sources are not touched in this phase to avoid
+* unnecessary memory consumption.
+*
+* @section s2 Building Documentation Structure
+*
+* This phase walks through all the gathered informations and also parses the sources.
+* THe parsing results are directly fed into the documentation structures. The Meta data
+* then is also filled into the documentation structures.
+*
+* @section s3 Output Markdown
+*
+* This phase generates a markdown text from the documentation structure.
+* This step can easily replaced by some other generating tool since
+* all sematinc information should be ready available in the documentation structure.
+*
 */
 
 

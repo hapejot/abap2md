@@ -32,6 +32,7 @@ CLASS zcl_abap2md_function_info DEFINITION
       mt_params      TYPE parameter_info_t,
       mv_description TYPE rswsourcet,
       ms_hd          TYPE trdir,
+      mr_info        TYPE REF TO zabap2md_function_info,
       m_src          TYPE stringtab.
     METHODS        user_name
       IMPORTING
@@ -41,6 +42,11 @@ CLASS zcl_abap2md_function_info DEFINITION
     METHODS extract_word CHANGING  text            TYPE rswsourcet
                          RETURNING
                                    VALUE(r_result) TYPE string.
+    METHODS find_param
+      IMPORTING
+        iv_tag_value    TYPE clike
+      RETURNING
+        VALUE(rr_param) TYPE REF TO zabap2md_param.
 ENDCLASS.
 
 
@@ -113,6 +119,10 @@ CLASS zcl_abap2md_function_info IMPLEMENTATION.
           ls_doc_hd               TYPE thead,
           lt_doc_lines            TYPE STANDARD TABLE OF tline.
 
+    DATA(lr_doc) = i_gen->doc( ).
+    APPEND INITIAL LINE TO lr_doc->functions REFERENCE INTO mr_info.
+
+
     CALL FUNCTION 'FUNCTION_IMPORT_DOKU'
       EXPORTING
         funcname                = ms_tfdir-funcname    " Name of the function module
@@ -144,12 +154,28 @@ CLASS zcl_abap2md_function_info IMPLEMENTATION.
         function_not_found      = 2
         invalid_name            = 3
         OTHERS                  = 4.
+
+    mr_info->name = ms_tfdir-funcname.
+    mr_info->title = short_text.
+
+*    LOOP AT export_parameter INTO DATA(epar).
+*    ENDLOOP.
+*    LOOP AT import_parameter INTO DATA(ipar).
+*    ENDLOOP.
+*    LOOP AT changing_parameter INTO DATA(cpar).
+*    ENDLOOP.
+*    LOOP AT tables_parameter INTO DATA(tpar).
+*    ENDLOOP.
+    LOOP AT dokumentation INTO DATA(dok).
+      DATA(par) = find_param( dok-parameter ).
+      par->title = dok-stext.
+    ENDLOOP.
+
     DATA lv_include TYPE tadir-obj_name.
     lv_include = |{ ms_tfdir-pname+3 }U{ ms_tfdir-include }|.
     READ REPORT lv_include INTO m_src.
 
     parse_docu( ).
-
 
     CALL FUNCTION 'DOCU_READ'
       EXPORTING
@@ -166,10 +192,10 @@ CLASS zcl_abap2md_function_info IMPLEMENTATION.
         line              = lt_doc_lines.
 
 
-    IF i_gen IS BOUND.
-      i_gen->main_text( REF #( mv_description ) ).
-      i_gen->add_text( m_src ).
-    ENDIF.
+*    IF i_gen IS BOUND.
+*      i_gen->main_text( REF #( mv_description ) ).
+*      i_gen->add_text( m_src ).
+*    ENDIF.
 
   ENDMETHOD.
 
@@ -241,14 +267,29 @@ CLASS zcl_abap2md_function_info IMPLEMENTATION.
         WHEN '@PARAM'.
           chunk = tokens->next_chunk( ).
           lv_tag_value = to_upper( extract_word( CHANGING text = chunk ) ).
-
+          DATA(lr_param) = find_param( lv_tag_value ).
+          APPEND LINES OF chunk TO lr_param->text.
+        WHEN '@@C'.
+          EXIT.
 
         WHEN OTHERS.
-
+          APPEND LINES OF chunk TO mr_info->text.
       ENDCASE.
 
     ENDDO.
 
   ENDMETHOD.
+
+  METHOD find_param.
+
+    rr_param  = REF #( mr_info->params[ name = iv_tag_value ] OPTIONAL ).
+    IF rr_param IS INITIAL.
+      APPEND VALUE #( name  = iv_tag_value ) TO mr_info->params REFERENCE INTO rr_param.
+    ENDIF.
+
+
+  ENDMETHOD.
+
+
 
 ENDCLASS.

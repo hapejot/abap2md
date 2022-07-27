@@ -1,20 +1,23 @@
-FUNCTION z_abap2md_generate_multi.
+FUNCTION z_abap2md_generate_doc_struct.
 *"----------------------------------------------------------------------
 *"*"Local Interface:
 *"  IMPORTING
 *"     VALUE(IT_NAMES) TYPE  ZABAP2MD_OBJECT_NAMES
 *"  EXPORTING
-*"     VALUE(ET_DOC) TYPE  STRINGTAB
+*"     VALUE(ES_STRUCT) TYPE  ZABAP2MD_DOC_STRUCTURE
+*"     VALUE(EV_DOC) TYPE  STRING
 *"----------------------------------------------------------------------
 **/
-* FM
-* Generating the documentation for several sources into one result
+* Generating the documentation structure only for several sources into one result
 * document.
 * @param it_names   gives the list of dev objects to be taken into concideration
-* @param et_doc     is the resulting documentation as markdown text, line by line
+* @param ev_doc     is the resulting documentation as json
+* @param es_struct  is the document structure as is
 */
 
   TRY.
+      DATA(lo_app) = NEW zcl_abap2md_main( ).
+
       DATA obj_names TYPE STANDARD TABLE OF tadir-obj_name.
       DATA name_range TYPE RANGE OF tadir-obj_name.
       " first select possible candidates from TADIR
@@ -33,11 +36,15 @@ FUNCTION z_abap2md_generate_multi.
             WHERE funcname IN @name_range
             APPENDING TABLE @obj_names.
 
-      DATA(lo_app) = NEW zcl_abap2md_main( ).
+
+
       LOOP AT obj_names INTO DATA(name).
         lo_app->add( name ).
       ENDLOOP.
-      et_doc[] = lo_app->generate_multiple( ).
+      es_struct = lo_app->build_structure( ).
+      ev_doc = /ui2/cl_json=>serialize( data = es_struct
+                                compress = abap_true
+                                pretty_name = /ui2/cl_json=>pretty_mode-extended ).
     CATCH zcx_abap2md_error.    "
   ENDTRY.
 

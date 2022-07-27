@@ -7,7 +7,9 @@ CLASS zcl_abap2md_tag_def_parser DEFINITION
     INTERFACES zif_abap2md_parser.
     METHODS constructor
       IMPORTING
-        i_src TYPE REF TO zif_abap2md_parser.
+        i_src  TYPE REF TO zif_abap2md_parser OPTIONAL
+        i_text TYPE REF TO zabap2md_text OPTIONAL
+          PREFERRED PARAMETER i_src .
   PRIVATE SECTION.
     TYPES: BEGIN OF pair,
              keyword TYPE string,
@@ -28,6 +30,10 @@ CLASS zcl_abap2md_tag_def_parser IMPLEMENTATION.
 
     me->src = i_src.
 
+    IF i_text IS NOT INITIAL.
+      me->mt_chunk = i_text->*.
+    ENDIF.
+
   ENDMETHOD.
 
   METHOD zif_abap2md_parser~next_chunk.
@@ -39,7 +45,9 @@ CLASS zcl_abap2md_tag_def_parser IMPLEMENTATION.
     IF pairs IS INITIAL.
       " read raw data if nothing is there to work on.
       IF mt_chunk IS INITIAL.
-        mt_chunk = src->next_chunk( ).
+        IF src IS BOUND.
+          mt_chunk = src->next_chunk( ).
+        ENDIF.
         CLEAR mode.
       ENDIF.
       LOOP AT mt_chunk INTO DATA(line).

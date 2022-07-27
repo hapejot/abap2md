@@ -9,6 +9,43 @@
    </INCLUDES>
    <FUNCTIONS>
     <item>
+     <FUNCNAME>Z_ABAP2MD_GENERATE_DOC_STRUCT</FUNCNAME>
+     <REMOTE_CALL>R</REMOTE_CALL>
+     <SHORT_TEXT>Generate an md document for a single object</SHORT_TEXT>
+     <IMPORT>
+      <RSIMP>
+       <PARAMETER>IT_NAMES</PARAMETER>
+       <TYP>ZABAP2MD_OBJECT_NAMES</TYP>
+      </RSIMP>
+     </IMPORT>
+     <EXPORT>
+      <RSEXP>
+       <PARAMETER>ES_STRUCT</PARAMETER>
+       <TYP>ZABAP2MD_DOC_STRUCTURE</TYP>
+      </RSEXP>
+      <RSEXP>
+       <PARAMETER>EV_DOC</PARAMETER>
+       <TYP>STRING</TYP>
+      </RSEXP>
+     </EXPORT>
+     <DOCUMENTATION>
+      <RSFDO>
+       <PARAMETER>IT_NAMES</PARAMETER>
+       <KIND>P</KIND>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>ES_STRUCT</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Documentation Structure</STEXT>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>EV_DOC</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>JSON representation of the doc structure</STEXT>
+      </RSFDO>
+     </DOCUMENTATION>
+    </item>
+    <item>
      <FUNCNAME>Z_ABAP2MD_GENERATE_MULTI</FUNCNAME>
      <REMOTE_CALL>R</REMOTE_CALL>
      <SHORT_TEXT>Generate an md document for a single object</SHORT_TEXT>

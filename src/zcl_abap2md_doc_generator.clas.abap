@@ -7,6 +7,9 @@ CLASS zcl_abap2md_doc_generator DEFINITION
     INTERFACES zif_abap2md_doc_generator.
     ALIASES: add_text FOR zif_abap2md_doc_generator~add_text,
              main_text FOR zif_abap2md_doc_generator~main_text.
+
+    DATA doc TYPE zabap2md_doc_structure.
+
     METHODS constructor
       IMPORTING
         i_current_text TYPE REF TO stringtab.
@@ -33,22 +36,42 @@ CLASS zcl_abap2md_doc_generator DEFINITION
              sections TYPE STANDARD TABLE OF section WITH KEY name,
            END OF page.
 
-    DATA:
-            m_pages TYPE STANDARD TABLE OF page WITH KEY name READ-ONLY.
   PROTECTED SECTION.
 
   PRIVATE SECTION.
-    DATA:
-      mr_current_page    TYPE REF TO page,
-      mr_current_section TYPE REF TO section,
-      mr_current_text    TYPE REF TO stringtab,
-      mr_main_text       TYPE REF TO stringtab.
     METHODS first_word
       CHANGING
         c_chunk         TYPE rswsourcet
       RETURNING
         VALUE(r_result) TYPE string.
+    METHODS gen_param_def_list
+      IMPORTING
+        i_gen    TYPE REF TO zif_abap2md_text_generator
+        i_params TYPE zabap2md_params.
+    "!
 
+    METHODS explained_name
+      IMPORTING i_title         TYPE any
+
+                i_name          TYPE any
+      RETURNING VALUE(r_result) TYPE string.
+    METHODS exposure_name
+      IMPORTING
+                i_enum          TYPE seoexpose
+      RETURNING VALUE(r_result) TYPE string.
+    METHODS gen_class
+      IMPORTING
+        i_gen TYPE REF TO zif_abap2md_text_generator
+        i_cls TYPE zabap2md_class_info.
+
+    DATA: mr_current_page       TYPE REF TO zabap2md_page,
+          mr_current_section    TYPE REF TO zabap2md_section,
+          mr_current_subsection TYPE REF TO zabap2md_subsection,
+          mr_current_text       TYPE REF TO zabap2md_page-text,
+          mr_main_text          TYPE REF TO zabap2md_text.
+    DATA: BEGIN OF m_cache,
+            exposure TYPE dd07v_tab,
+          END OF m_cache.
 ENDCLASS.
 
 
@@ -56,14 +79,13 @@ ENDCLASS.
 CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
   METHOD constructor.
 
-    me->mr_current_text = i_current_text.
-    me->mr_main_text    = i_current_text.
 
   ENDMETHOD.
 
 
   METHOD zif_abap2md_doc_generator~main_text.
     mr_main_text = i_text.
+    mr_current_text = mr_main_text.
   ENDMETHOD.
 
   METHOD zif_abap2md_doc_generator~add_text.
@@ -78,7 +100,7 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
         WHEN '@page'.
           chunk = source->next_chunk( ).
           name = first_word( CHANGING c_chunk = chunk ).
-          APPEND VALUE #( name = name ) TO m_pages REFERENCE INTO mr_current_page.
+          APPEND VALUE #( name = name ) TO doc-pages REFERENCE INTO mr_current_page.
           mr_current_page->title = chunk[ 1 ].
           mr_current_text = REF #( mr_current_page->text ).
           DELETE chunk INDEX 1.
@@ -130,10 +152,13 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
   METHOD generate_markdown.
     DATA: page       TYPE page,
           section    TYPE section,
-          subsection TYPE subsection.
-    DATA(gen) = CAST zif_abap2md_text_generator( NEW zcl_abap2md_markdown( ) ).
+          subsection TYPE subsection,
+          gen        TYPE REF TO zif_abap2md_text_generator.
 
-    LOOP AT m_pages INTO page.
+
+    gen ?= NEW zcl_abap2md_markdown( ).
+
+    LOOP AT doc-pages INTO page.
       gen->heading(   iv_level = 1
                       iv_text  = page-title
         )->text( page-text ).
@@ -149,6 +174,114 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
       ENDLOOP.
     ENDLOOP.
 
+    LOOP AT doc-programs INTO DATA(prg).
+      gen->heading( iv_level = 1
+                      iv_text = |{ 'Report'(002) } {
+                                    explained_name( i_name = prg-name
+                                                    i_title = prg-title ) }|
+      )->text( prg-text ).
+      gen_param_def_list(     i_gen = gen
+                              i_params = prg-params ).
+    ENDLOOP.
+
+    LOOP AT doc-functions INTO DATA(fun).
+      gen->heading( iv_level = 1
+          iv_text = |{ 'Function'(003) } {
+                                explained_name( i_name  = fun-name
+                                                i_title = fun-title ) }|
+       )->text( fun-text ).
+      gen_param_def_list(
+          i_gen    = gen
+          i_params = fun-params
+      ).
+    ENDLOOP.
+
+    LOOP AT doc-classes INTO DATA(cls).
+      gen_class(      i_gen = gen
+                      i_cls = cls ).
+    ENDLOOP.
+
     APPEND LINES OF gen->result( ) TO ct_text.
   ENDMETHOD.
+
+  METHOD gen_class.
+    DATA code TYPE stringtab.
+
+    i_gen->heading( iv_level    =   1
+                    iv_text     =   |{ 'Class'(004) } { i_cls-name } - { i_cls-title }|
+     )->text(                       i_cls-text ).
+
+    LOOP AT i_cls-methods INTO DATA(method).
+      i_gen->heading( iv_level = 2
+            iv_text =  |{ 'Method'(001) } {
+                            explained_name( i_name = |{ method-name }|
+                                      i_title = method-title ) }| ).
+
+      code = VALUE #( ( |METHOD { method-name }| ) ).
+
+*      APPEND |    IMPORTING|    TO code.
+      LOOP AT method-params INTO DATA(param).
+        APPEND |    { param-direction WIDTH = 10 }   { param-name } TYPE { param-data_type }| TO code.
+      ENDLOOP.
+*      APPEND |    EXPORTING|    TO code.
+*      APPEND |    CHANGING|     TO code.
+*      APPEND |    RETURNING VALUE() TYPE | TO code.
+      IF method-returns-data_type IS NOT INITIAL.
+        APPEND |    { 'RETURNING' WIDTH = 10 }   { method-returns-name } TYPE { method-returns-data_type }| TO code.
+      ENDIF.
+      i_gen->code( code ).
+      i_gen->text( method-text ).
+      gen_param_def_list(
+          i_gen    = i_gen
+          i_params = method-params
+      ).
+    ENDLOOP.
+
+
+  ENDMETHOD.
+
+
+
+  METHOD explained_name.
+    IF i_title IS INITIAL.
+      r_result = |{ i_name }|.
+    ELSE.
+      r_result = |{ i_name } - { i_title }|.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD gen_param_def_list.
+
+    LOOP AT i_params INTO DATA(param).
+      i_gen->definition(    iv_text = param-text
+                          iv_def  = param-name    ).
+    ENDLOOP.
+
+
+  ENDMETHOD.
+
+
+
+  METHOD zif_abap2md_doc_generator~doc.
+    r_result = REF #( doc ).
+  ENDMETHOD.
+
+
+  METHOD exposure_name.
+    IF m_cache-exposure IS INITIAL.
+      CALL FUNCTION 'DD_DOMVALUES_GET'
+        EXPORTING
+          domname   = 'SEOEXPOSE'
+          text      = 'X'
+*         langu     = 'E'
+        TABLES
+          dd07v_tab = m_cache-exposure
+        EXCEPTIONS
+          OTHERS    = 0.
+    ENDIF.
+
+    r_result = VALUE #( m_cache-exposure[ domvalue_l = i_enum ]-ddtext OPTIONAL ).
+  ENDMETHOD.
+
 ENDCLASS.
