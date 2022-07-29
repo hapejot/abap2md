@@ -76,7 +76,9 @@ ENDCLASS.
 
 
 
-CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
+CLASS ZCL_ABAP2MD_DOC_GENERATOR IMPLEMENTATION.
+
+
   METHOD constructor.
 
 
@@ -87,6 +89,7 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
     mr_main_text = i_text.
     mr_current_text = mr_main_text.
   ENDMETHOD.
+
 
   METHOD zif_abap2md_doc_generator~add_text.
     DATA: name TYPE string.
@@ -204,6 +207,7 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
     APPEND LINES OF gen->result( ) TO ct_text.
   ENDMETHOD.
 
+
   METHOD gen_class.
     DATA code TYPE stringtab.
 
@@ -216,6 +220,7 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
             iv_text =  |{ 'Method'(001) } {
                             explained_name( i_name = |{ method-name }|
                                       i_title = method-title ) }| ).
+      i_gen->text( method-title ).
 
       code = VALUE #( ( |METHOD { method-name }| ) ).
 
@@ -241,7 +246,6 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
   ENDMETHOD.
 
 
-
   METHOD explained_name.
     IF i_title IS INITIAL.
       r_result = |{ i_name }|.
@@ -260,7 +264,6 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
 
 
   ENDMETHOD.
-
 
 
   METHOD zif_abap2md_doc_generator~doc.
@@ -283,5 +286,4 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
 
     r_result = VALUE #( m_cache-exposure[ domvalue_l = i_enum ]-ddtext OPTIONAL ).
   ENDMETHOD.
-
 ENDCLASS.

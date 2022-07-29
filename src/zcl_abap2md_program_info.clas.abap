@@ -45,7 +45,9 @@ ENDCLASS.
 
 
 
-CLASS zcl_abap2md_program_info IMPLEMENTATION.
+CLASS ZCL_ABAP2MD_PROGRAM_INFO IMPLEMENTATION.
+
+
   METHOD constructor.
 
     me->ms_tadir = is_tadir.
@@ -66,6 +68,7 @@ CLASS zcl_abap2md_program_info IMPLEMENTATION.
     ENDIF.
 
   ENDMETHOD.
+
 
   METHOD zif_abap2md_info~build_doc_structure.
     DATA: pars TYPE STANDARD TABLE OF rsel_paras.
@@ -92,11 +95,11 @@ CLASS zcl_abap2md_program_info IMPLEMENTATION.
           selpars = pars
         EXCEPTIONS
           OTHERS  = 4.
-      ASSERT 0 = sy-subrc.
+      IF 0 = sy-subrc.
 
-      mr_info->params = VALUE #( FOR <x> IN pars
-                                  ( name = <x>-name ) ).
-
+        mr_info->params = VALUE #( FOR <x> IN pars
+                                    ( name = <x>-name ) ).
+      ENDIF.
 
 
       DATA lt_text TYPE zabap2md_text.
@@ -118,7 +121,6 @@ CLASS zcl_abap2md_program_info IMPLEMENTATION.
 
 
   ENDMETHOD.
-
 
 
   METHOD zif_abap2md_info~generate_markdown.
@@ -146,6 +148,7 @@ CLASS zcl_abap2md_program_info IMPLEMENTATION.
 
     APPEND LINES OF lo_markdown->result( ) TO ct_text.
   ENDMETHOD.
+
 
   METHOD zif_abap2md_info~read_main.
 
@@ -238,5 +241,4 @@ CLASS zcl_abap2md_program_info IMPLEMENTATION.
     ENDWHILE.
 
   ENDMETHOD.
-
 ENDCLASS.

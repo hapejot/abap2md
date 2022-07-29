@@ -111,7 +111,9 @@ ENDCLASS.
 
 
 
-CLASS zcl_abap2md_class_info IMPLEMENTATION.
+CLASS ZCL_ABAP2MD_CLASS_INFO IMPLEMENTATION.
+
+
   METHOD constructor.
 
     me->ms_tadir = iv_tadir.
@@ -131,6 +133,7 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
       ro_result = NEW zcl_abap2md_class_info( ls_tadir ).
     ENDIF.
   ENDMETHOD.
+
 
   METHOD zif_abap2md_info~read_main.
 **/
@@ -390,6 +393,7 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 
   ENDMETHOD.
 
+
   METHOD zif_abap2md_info~build_doc_structure.
 **/
 * This method builds the whole class documentation structure
@@ -407,6 +411,7 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 
 
   ENDMETHOD.
+
 
   METHOD zif_abap2md_info~generate_markdown.
 
@@ -458,6 +463,7 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
     APPEND LINES OF lo_markdown->result( ) TO ct_text.
 
   ENDMETHOD.
+
 
   METHOD write_out_params.
 **/
@@ -633,9 +639,9 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
       ENDIF.
       lr_meth->name = lv_cpdname.
 
-
-      lr_meth->exposure = ls_method-exposure.
-      lr_meth->redefined = ls_method-redefin.
+      lr_meth->title      = |{ ls_method-descript }|.
+      lr_meth->exposure   = ls_method-exposure.
+      lr_meth->redefined  = ls_method-redefin.
 
       IF ls_method-mtddecltyp = '1'.
         lr_meth->static = abap_true.
