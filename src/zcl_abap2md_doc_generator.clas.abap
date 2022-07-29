@@ -85,56 +85,29 @@ CLASS ZCL_ABAP2MD_DOC_GENERATOR IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_abap2md_doc_generator~main_text.
-    mr_main_text = i_text.
-    mr_current_text = mr_main_text.
+  METHOD explained_name.
+    IF i_title IS INITIAL.
+      r_result = |{ i_name }|.
+    ELSE.
+      r_result = |{ i_name } - { i_title }|.
+    ENDIF.
   ENDMETHOD.
 
 
-  METHOD zif_abap2md_doc_generator~add_text.
-    DATA: name TYPE string.
-    DATA(source) = CAST zif_abap2md_parser( NEW zcl_abap2md_tag_def_parser( NEW zcl_abap2md_comment_parser( i_code ) ) ).
-    DO.
-      DATA(chunk) = source->next_chunk( ).
-      IF chunk IS INITIAL.
-        EXIT.
-      ENDIF.
-      CASE chunk[ 1 ].
-        WHEN '@page'.
-          chunk = source->next_chunk( ).
-          name = first_word( CHANGING c_chunk = chunk ).
-          APPEND VALUE #( name = name ) TO doc-pages REFERENCE INTO mr_current_page.
-          mr_current_page->title = chunk[ 1 ].
-          mr_current_text = REF #( mr_current_page->text ).
-          DELETE chunk INDEX 1.
-          APPEND LINES OF chunk TO mr_current_text->*.
-          CLEAR mr_current_section.
-        WHEN '@section'.
-          chunk = source->next_chunk( ).
-          name = first_word( CHANGING c_chunk = chunk ).
-          ASSERT mr_current_page IS BOUND.
-          APPEND VALUE #( name = name ) TO mr_current_page->sections REFERENCE INTO mr_current_section.
-          mr_current_text = REF #( mr_current_section->text ).
-          mr_current_section->title = chunk[ 1 ].
-          DELETE chunk INDEX 1.
-          APPEND LINES OF chunk TO mr_current_text->*.
-        WHEN '@subsection'.
-          chunk = source->next_chunk( ).
-          name = first_word( CHANGING c_chunk = chunk ).
-          ASSERT mr_current_section IS BOUND.
-          APPEND VALUE #( name = name ) TO mr_current_section->subsections REFERENCE INTO DATA(lr_subsection).
-          lr_subsection->title = chunk[ 1 ].
-          DELETE chunk INDEX 1.
-          mr_current_text = REF #( lr_subsection->text ).
-          APPEND LINES OF chunk TO mr_current_text->*.
-        WHEN '@@c'. " end of comment chunk is automatically end of pages and sections.
-          CLEAR mr_current_page.
-          CLEAR mr_current_section.
-          mr_current_text = mr_main_text.
-        WHEN OTHERS.
-          APPEND LINES OF chunk TO mr_current_text->*.
-      ENDCASE.
-    ENDDO.
+  METHOD exposure_name.
+    IF m_cache-exposure IS INITIAL.
+      CALL FUNCTION 'DD_DOMVALUES_GET'
+        EXPORTING
+          domname   = 'SEOEXPOSE'
+          text      = 'X'
+*         langu     = 'E'
+        TABLES
+          dd07v_tab = m_cache-exposure
+        EXCEPTIONS
+          OTHERS    = 0.
+    ENDIF.
+
+    r_result = VALUE #( m_cache-exposure[ domvalue_l = i_enum ]-ddtext OPTIONAL ).
   ENDMETHOD.
 
 
@@ -212,7 +185,7 @@ CLASS ZCL_ABAP2MD_DOC_GENERATOR IMPLEMENTATION.
     DATA code TYPE stringtab.
 
     i_gen->heading( iv_level    =   1
-                    iv_text     =   |{ 'Class'(004) } { i_cls-name } - { i_cls-title }|
+                    iv_text     =   |{ 'Class'(004) } { i_cls-name }|
      )->text(                       i_cls-text ).
 
     LOOP AT i_cls-methods INTO DATA(method).
@@ -225,14 +198,19 @@ CLASS ZCL_ABAP2MD_DOC_GENERATOR IMPLEMENTATION.
       code = VALUE #( ( |METHOD { method-name }| ) ).
 
 *      APPEND |    IMPORTING|    TO code.
+      DATA(w) = REDUCE i( INIT s = 5
+              FOR <x> IN method-params
+              NEXT s = COND #(  WHEN strlen( <x>-name ) > s
+                                THEN strlen( <x>-name )
+                                ELSE s ) ).
       LOOP AT method-params INTO DATA(param).
-        APPEND |    { param-direction WIDTH = 10 }   { param-name } TYPE { param-data_type }| TO code.
+        APPEND |    { param-direction WIDTH = 10 }   { param-name WIDTH = w } TYPE { param-data_type }| TO code.
       ENDLOOP.
 *      APPEND |    EXPORTING|    TO code.
 *      APPEND |    CHANGING|     TO code.
 *      APPEND |    RETURNING VALUE() TYPE | TO code.
       IF method-returns-data_type IS NOT INITIAL.
-        APPEND |    { 'RETURNING' WIDTH = 10 }   { method-returns-name } TYPE { method-returns-data_type }| TO code.
+        APPEND |    { 'RETURNING' WIDTH = 10 }   { method-returns-name WIDTH = w } TYPE { method-returns-data_type }| TO code.
       ENDIF.
       i_gen->code( code ).
       i_gen->text( method-text ).
@@ -243,15 +221,6 @@ CLASS ZCL_ABAP2MD_DOC_GENERATOR IMPLEMENTATION.
     ENDLOOP.
 
 
-  ENDMETHOD.
-
-
-  METHOD explained_name.
-    IF i_title IS INITIAL.
-      r_result = |{ i_name }|.
-    ELSE.
-      r_result = |{ i_name } - { i_title }|.
-    ENDIF.
   ENDMETHOD.
 
 
@@ -266,24 +235,60 @@ CLASS ZCL_ABAP2MD_DOC_GENERATOR IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD zif_abap2md_doc_generator~add_text.
+    DATA: name TYPE string.
+    DATA(source) = CAST zif_abap2md_parser( NEW zcl_abap2md_tag_def_parser( NEW zcl_abap2md_comment_parser( i_code ) ) ).
+    DO.
+      DATA(chunk) = source->next_chunk( ).
+      IF chunk IS INITIAL.
+        EXIT.
+      ENDIF.
+      CASE chunk[ 1 ].
+        WHEN '@page'.
+          chunk = source->next_chunk( ).
+          name = first_word( CHANGING c_chunk = chunk ).
+          APPEND VALUE #( name = name ) TO doc-pages REFERENCE INTO mr_current_page.
+          mr_current_page->title = chunk[ 1 ].
+          mr_current_text = REF #( mr_current_page->text ).
+          DELETE chunk INDEX 1.
+          APPEND LINES OF chunk TO mr_current_text->*.
+          CLEAR mr_current_section.
+        WHEN '@section'.
+          chunk = source->next_chunk( ).
+          name = first_word( CHANGING c_chunk = chunk ).
+          ASSERT mr_current_page IS BOUND.
+          APPEND VALUE #( name = name ) TO mr_current_page->sections REFERENCE INTO mr_current_section.
+          mr_current_text = REF #( mr_current_section->text ).
+          mr_current_section->title = chunk[ 1 ].
+          DELETE chunk INDEX 1.
+          APPEND LINES OF chunk TO mr_current_text->*.
+        WHEN '@subsection'.
+          chunk = source->next_chunk( ).
+          name = first_word( CHANGING c_chunk = chunk ).
+          ASSERT mr_current_section IS BOUND.
+          APPEND VALUE #( name = name ) TO mr_current_section->subsections REFERENCE INTO DATA(lr_subsection).
+          lr_subsection->title = chunk[ 1 ].
+          DELETE chunk INDEX 1.
+          mr_current_text = REF #( lr_subsection->text ).
+          APPEND LINES OF chunk TO mr_current_text->*.
+        WHEN '@@c'. " end of comment chunk is automatically end of pages and sections.
+          CLEAR mr_current_page.
+          CLEAR mr_current_section.
+          mr_current_text = mr_main_text.
+        WHEN OTHERS.
+          APPEND LINES OF chunk TO mr_current_text->*.
+      ENDCASE.
+    ENDDO.
+  ENDMETHOD.
+
+
   METHOD zif_abap2md_doc_generator~doc.
     r_result = REF #( doc ).
   ENDMETHOD.
 
 
-  METHOD exposure_name.
-    IF m_cache-exposure IS INITIAL.
-      CALL FUNCTION 'DD_DOMVALUES_GET'
-        EXPORTING
-          domname   = 'SEOEXPOSE'
-          text      = 'X'
-*         langu     = 'E'
-        TABLES
-          dd07v_tab = m_cache-exposure
-        EXCEPTIONS
-          OTHERS    = 0.
-    ENDIF.
-
-    r_result = VALUE #( m_cache-exposure[ domvalue_l = i_enum ]-ddtext OPTIONAL ).
+  METHOD zif_abap2md_doc_generator~main_text.
+    mr_main_text = i_text.
+    mr_current_text = mr_main_text.
   ENDMETHOD.
 ENDCLASS.
