@@ -63,6 +63,19 @@ CLASS zcl_abap2md_doc_generator DEFINITION
       IMPORTING
         i_gen TYPE REF TO zif_abap2md_text_generator
         i_cls TYPE zabap2md_class_info.
+    METHODS write_dependencies
+      IMPORTING
+        i_cls TYPE zabap2md_class_info
+        i_gen TYPE REF TO zif_abap2md_text_generator.
+    METHODS gen_method
+      IMPORTING
+        i_method TYPE zabap2md_method_info
+        i_gen    TYPE REF TO zif_abap2md_text_generator.
+    METHODS static_name
+      IMPORTING
+        iv_static      TYPE zabap2md_method_info-static
+      RETURNING
+        VALUE(rv_name) TYPE string.
 
     DATA: mr_current_page       TYPE REF TO zabap2md_page,
           mr_current_section    TYPE REF TO zabap2md_section,
@@ -76,7 +89,7 @@ ENDCLASS.
 
 
 
-CLASS ZCL_ABAP2MD_DOC_GENERATOR IMPLEMENTATION.
+CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
 
 
   METHOD constructor.
@@ -91,6 +104,14 @@ CLASS ZCL_ABAP2MD_DOC_GENERATOR IMPLEMENTATION.
     ELSE.
       r_result = |{ i_name } - { i_title }|.
     ENDIF.
+  ENDMETHOD.
+
+  METHOD static_name.
+
+    IF iv_static = abap_true.
+      rv_name = 'static'.
+    ENDIF.
+
   ENDMETHOD.
 
 
@@ -188,47 +209,100 @@ CLASS ZCL_ABAP2MD_DOC_GENERATOR IMPLEMENTATION.
                     iv_text     =   |{ 'Class'(004) } { i_cls-name }|
      )->text(                       i_cls-text ).
 
+    write_dependencies(   i_cls = i_cls
+                          i_gen = i_gen ).
+
     LOOP AT i_cls-methods INTO DATA(method).
-      i_gen->heading( iv_level = 2
-            iv_text =  |{ 'Method'(001) } {
-                            explained_name( i_name = |{ method-name }|
-                                      i_title = method-title ) }| ).
-      i_gen->text( method-title ).
-
-      code = VALUE #( ( |METHOD { method-name }| ) ).
-
-*      APPEND |    IMPORTING|    TO code.
-      DATA(w) = REDUCE i( INIT s = 5
-              FOR <x> IN method-params
-              NEXT s = COND #(  WHEN strlen( <x>-name ) > s
-                                THEN strlen( <x>-name )
-                                ELSE s ) ).
-      LOOP AT method-params INTO DATA(param).
-        APPEND |    { param-direction WIDTH = 10 }   { param-name WIDTH = w } TYPE { param-data_type }| TO code.
-      ENDLOOP.
-*      APPEND |    EXPORTING|    TO code.
-*      APPEND |    CHANGING|     TO code.
-*      APPEND |    RETURNING VALUE() TYPE | TO code.
-      IF method-returns-data_type IS NOT INITIAL.
-        APPEND |    { 'RETURNING' WIDTH = 10 }   { method-returns-name WIDTH = w } TYPE { method-returns-data_type }| TO code.
+      IF method-title IS NOT INITIAL OR method-text IS NOT INITIAL.
+        gen_method(         i_method = method
+                            i_gen    = i_gen ).
       ENDIF.
-      i_gen->code( code ).
-      i_gen->text( method-text ).
-      gen_param_def_list(
-          i_gen    = i_gen
-          i_params = method-params
-      ).
     ENDLOOP.
 
 
   ENDMETHOD.
 
+  METHOD gen_method.
+
+    DATA code TYPE stringtab.
+
+    i_gen->heading( iv_level = 2
+            iv_text =  |{ exposure_name(  i_method-exposure ) } {
+                            static_name( i_method-static ) } { 'Method'(001) } {
+                            explained_name( i_name = |{ i_method-name }|
+            i_title = i_method-title ) }| ).
+    i_gen->text( i_method-title ).
+
+    code = VALUE #( ( |METHOD { i_method-name }| ) ).
+
+*      APPEND |    IMPORTING|    TO code.
+    DATA(w) = REDUCE i( INIT s = 5
+            FOR <x> IN i_method-params
+            NEXT s = COND #(  WHEN strlen( <x>-name ) > s
+                              THEN strlen( <x>-name )
+                              ELSE s ) ).
+    LOOP AT i_method-params INTO DATA(param).
+      APPEND |    { param-direction WIDTH = 10 }   { param-name WIDTH = w } TYPE { param-data_type }| TO code.
+    ENDLOOP.
+*      APPEND |    EXPORTING|    TO code.
+*      APPEND |    CHANGING|     TO code.
+*      APPEND |    RETURNING VALUE() TYPE | TO code.
+    IF i_method-returns-data_type IS NOT INITIAL.
+      APPEND |    { 'RETURNING' WIDTH = 10 }   { i_method-returns-name WIDTH = w } TYPE { i_method-returns-data_type }| TO code.
+    ENDIF.
+    i_gen->code( code ).
+    i_gen->text( i_method-text ).
+    gen_param_def_list(     i_gen    = i_gen
+                            i_params = i_method-params    ).
+    IF i_method-returns-text IS NOT INITIAL.
+      i_gen->definition(    iv_def  = 'Returns'
+                            iv_text = i_method-returns-text      ).
+    ENDIF.
+
+
+  ENDMETHOD.
+
+
+
+  METHOD write_dependencies.
+
+    DATA: dep           LIKE LINE OF i_cls-dependencies,
+          title_written TYPE abap_bool.
+    CLEAR title_written.
+    LOOP AT i_cls-dependencies INTO dep WHERE kind = 'FU-SYMBOL'.
+      IF title_written IS INITIAL.
+        i_gen->heading( iv_level = 2 iv_text = 'Referenced Function Modules' ).
+        title_written = abap_true.
+      ENDIF.
+      i_gen->definition(    iv_text = |{ dep-title }|
+                                  iv_def  = dep-name ).
+    ENDLOOP.
+
+    CLEAR title_written.
+    LOOP AT i_cls-dependencies INTO dep WHERE kind = 'TY-CLASS'.
+      CHECK dep-name(1) = 'Z'.
+      IF title_written IS INITIAL.
+        i_gen->heading( iv_level = 2 iv_text = 'Referenced Custom Classes' ).
+        title_written = abap_true.
+      ENDIF.
+      i_gen->definition(    iv_text = |{ dep-title }|
+                                  iv_def  = dep-name ).
+    ENDLOOP.
+
+
+
+  ENDMETHOD.
+
+
+
 
   METHOD gen_param_def_list.
 
     LOOP AT i_params INTO DATA(param).
-      i_gen->definition(    iv_text = param-text
-                          iv_def  = param-name    ).
+      IF param-text IS NOT INITIAL.
+        i_gen->definition(  iv_text = param-text
+                            iv_def  = param-name    ).
+      ENDIF.
     ENDLOOP.
 
 

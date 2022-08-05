@@ -31,6 +31,15 @@
 * This step can easily replaced by some other generating tool since
 * all sematinc information should be ready available in the documentation structure.
 *
+* ```graphviz
+* digraph G {
+*    A -> C
+*    A -> D
+*    B -> E
+*    B -> F
+* }
+* ```
+*
 */
 
 

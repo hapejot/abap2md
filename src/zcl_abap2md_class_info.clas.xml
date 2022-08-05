@@ -11,6 +11,14 @@
     <FIXPT>X</FIXPT>
     <UNICODE>X</UNICODE>
    </VSEOCLASS>
+   <DESCRIPTIONS>
+    <SEOCOMPOTX>
+     <CLSNAME>ZCL_ABAP2MD_CLASS_INFO</CLSNAME>
+     <CMPNAME>READ_DEPENDENCIES</CMPNAME>
+     <LANGU>E</LANGU>
+     <DESCRIPT>reading dependencies from the source code</DESCRIPT>
+    </SEOCOMPOTX>
+   </DESCRIPTIONS>
   </asx:values>
  </asx:abap>
 </abapGit>
