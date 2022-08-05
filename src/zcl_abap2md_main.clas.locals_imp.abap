@@ -160,7 +160,7 @@ ENDCLASS.
 CLASS lcl_class_info DEFINITION FINAL.
 
   PUBLIC SECTION.
-    INTERFACES lif_info.
+    INTERFACES zif_abap2md_info.
     CLASS-METHODS try_read
       IMPORTING
         iv_name          TYPE tadir-obj_name
@@ -272,6 +272,7 @@ CLASS lcl_class_info IMPLEMENTATION.
   METHOD constructor.
 
     me->ms_tadir = iv_tadir.
+    RAISE EXCEPTION TYPE cx_os_system_error.
 
   ENDMETHOD.
 
@@ -289,7 +290,7 @@ CLASS lcl_class_info IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
-  METHOD lif_info~read_main.
+  METHOD zif_abap2md_info~read_main.
 **/
 * This method reads the class information
 *
@@ -549,7 +550,7 @@ CLASS lcl_class_info IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD lif_info~build_doc_structure.
+  METHOD zif_abap2md_info~build_doc_structure.
 **/
 * This method builds the whole class documentation structure
 *
@@ -567,9 +568,9 @@ CLASS lcl_class_info IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD lif_info~generate_markdown.
+  METHOD zif_abap2md_info~generate_markdown.
 
-    DATA(lo_markdown) = CAST lif_text_generator( NEW lcl_markdown( ) ).
+    DATA(lo_markdown) = CAST zif_abap2md_text_generator( NEW lcl_markdown( ) ).
 
     lo_markdown->heading( iv_level = 1 iv_text = ms_class_docu_structure-class_name
                 )->text( ms_class_docu_structure-brief
@@ -987,11 +988,11 @@ ENDCLASS.
 
 CLASS lcl_markdown IMPLEMENTATION.
 
-  METHOD lif_text_generator~generate.
+  METHOD zif_abap2md_text_generator~generate.
 
   ENDMETHOD.
 
-  METHOD lif_text_generator~heading.
+  METHOD zif_abap2md_text_generator~heading.
 **/
 * reporting the heading in form of
 *      # heading 1
@@ -1000,7 +1001,7 @@ CLASS lcl_markdown IMPLEMENTATION.
 
     DATA: txt TYPE string.
 
-    lif_text_generator~new_paragraph( ).
+    zif_abap2md_text_generator~new_paragraph( ).
     CASE iv_level.
       WHEN 1.
         txt = CONV string( iv_text ).
@@ -1017,7 +1018,7 @@ CLASS lcl_markdown IMPLEMENTATION.
     ro_gen = me.
   ENDMETHOD.
 
-  METHOD lif_text_generator~text.
+  METHOD zif_abap2md_text_generator~text.
 
     FIELD-SYMBOLS: <lt_text> TYPE STANDARD TABLE,
                    <lv_text> TYPE any.
@@ -1043,13 +1044,13 @@ CLASS lcl_markdown IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD lif_text_generator~result.
+  METHOD zif_abap2md_text_generator~result.
 
     r_result = mt_text.
 
   ENDMETHOD.
 
-  METHOD lif_text_generator~code.
+  METHOD zif_abap2md_text_generator~code.
     FIELD-SYMBOLS: <lt_text> TYPE STANDARD TABLE,
                    <lv_text> TYPE any.
 
@@ -1069,7 +1070,7 @@ CLASS lcl_markdown IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD lif_text_generator~definition.
+  METHOD zif_abap2md_text_generator~definition.
 
     FIELD-SYMBOLS: <lt_text> TYPE STANDARD TABLE,
                    <lv_text> TYPE any.
@@ -1098,7 +1099,7 @@ CLASS lcl_markdown IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD lif_text_generator~new_paragraph.
+  METHOD zif_abap2md_text_generator~new_paragraph.
     " skip one line only if there is already text.
     IF mt_text IS NOT INITIAL AND mt_text[ lines( mt_text ) ] IS NOT INITIAL.
       APPEND INITIAL LINE TO mt_text.
@@ -1168,12 +1169,12 @@ ENDCLASS.
 CLASS lcl_program_info DEFINITION FINAL.
 
   PUBLIC SECTION.
-    INTERFACES lif_info.
+    INTERFACES zif_abap2md_info.
     CLASS-METHODS try_read
       IMPORTING
         iv_name          TYPE string
       RETURNING
-        VALUE(ro_result) TYPE REF TO lif_info.
+        VALUE(ro_result) TYPE REF TO zif_abap2md_info.
     METHODS constructor
       IMPORTING
         is_tadir TYPE tadir.
@@ -1216,7 +1217,7 @@ CLASS lcl_program_info IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD lif_info~build_doc_structure.
+  METHOD zif_abap2md_info~build_doc_structure.
     SELECT SINGLE *
                 FROM trdirt
                 WHERE name = @ms_tadir-obj_name
@@ -1236,7 +1237,7 @@ CLASS lcl_program_info IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD lif_info~generate_markdown.
+  METHOD zif_abap2md_info~generate_markdown.
     TYPES: BEGIN OF row,
              when TYPE string,
              date TYPE string,
@@ -1250,7 +1251,7 @@ CLASS lcl_program_info IMPLEMENTATION.
                     ( when = `last changed` date = |{ ms_hd-udat DATE = USER }|  user = user_name( ms_hd-unam ) )
      ).
 
-    DATA(lo_markdown) = CAST lif_text_generator( NEW lcl_markdown( ) ).
+    DATA(lo_markdown) = CAST zif_abap2md_text_generator( NEW lcl_markdown( ) ).
 
     lo_markdown->heading( iv_level = 1 iv_text = ms_tadir-obj_name
                 )->text( ms_text-text
@@ -1262,10 +1263,20 @@ CLASS lcl_program_info IMPLEMENTATION.
     APPEND LINES OF lo_markdown->result( ) TO ct_text.
   ENDMETHOD.
 
-  METHOD lif_info~read_main.
+  METHOD zif_abap2md_info~read_main.
 
+    DATA: texttab TYPE STANDARD TABLE OF textpool,
+          pars    TYPE STANDARD TABLE OF rsel_paras.
+    READ TEXTPOOL ms_tadir-obj_name LANGUAGE sy-langu INTO texttab.
 
-
+    CALL FUNCTION 'SELOPTS_AND_PARAMS'
+      EXPORTING
+        program = ms_tadir-obj_name
+      TABLES
+        selpars = pars
+      EXCEPTIONS
+        OTHERS  = 4.
+    ASSERT 0 = sy-subrc.
 
     READ REPORT ms_tadir-obj_name INTO m_src.
 
@@ -1298,6 +1309,198 @@ CLASS lcl_program_info IMPLEMENTATION.
 
 ENDCLASS.
 
+
+CLASS lcl_function_info DEFINITION FINAL.
+
+  PUBLIC SECTION.
+    INTERFACES zif_abap2md_info.
+    CLASS-METHODS try_read
+      IMPORTING
+        iv_name          TYPE string
+      RETURNING
+        VALUE(ro_result) TYPE REF TO zif_abap2md_info.
+    METHODS constructor
+      IMPORTING
+        is_tfdir TYPE tfdir.
+
+  PROTECTED SECTION.
+
+  PRIVATE SECTION.
+    DATA:
+      ms_tfdir       TYPE tfdir,
+      ms_text        TYPE trdirt,
+      mv_description TYPE rswsourcet,
+      ms_hd          TYPE trdir,
+      m_src          TYPE stringtab.
+    METHODS        user_name
+      IMPORTING
+                iv_uname       TYPE syst_uname
+      RETURNING VALUE(rv_name) TYPE string.
+ENDCLASS.
+
+
+CLASS lcl_function_info IMPLEMENTATION.
+
+  METHOD constructor.
+
+    me->ms_tfdir = is_tfdir.
+
+  ENDMETHOD.
+
+
+  METHOD try_read.
+    DATA: ls_tfdir TYPE tfdir.
+    SELECT SINGLE *
+                FROM tfdir
+                WHERE funcname = @iv_name
+                INTO @ls_tfdir.
+    IF sy-subrc = 0. " found this to be a class name...
+      ro_result = NEW lcl_function_info( ls_tfdir ).
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD user_name.
+    DATA: ls_address TYPE bapiaddr3,
+          lt_ret     TYPE STANDARD TABLE OF bapiret2,
+          ls_company TYPE bapiuscomp.
+
+    CALL FUNCTION 'BAPI_USER_GET_DETAIL'
+      EXPORTING
+        username = iv_uname
+      IMPORTING
+        address  = ls_address
+        company  = ls_company
+      TABLES
+        return   = lt_ret.
+
+    rv_name = |{ ls_address-firstname } { ls_address-lastname }|.
+    IF ls_company-company IS NOT INITIAL.
+      rv_name = |{ rv_name } ({ ls_company-company })|.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD zif_abap2md_info~build_doc_structure.
+    DATA: funcname                TYPE rs38l-name,
+          language                TYPE sy-langu,
+          with_enhancement        TYPE char1,
+          ignore_switches         TYPE char1,
+          global_flag             TYPE rs38l-global,
+          remote_call             TYPE rs38l-remote,
+          update_task             TYPE rs38l-utask,
+          short_text              TYPE tftit-stext,
+          freedate                TYPE enlfdir-freedate,
+          exception_class         TYPE enlfdir-exten3,
+          remote_basxml_supported TYPE rs38l-basxml_enabled,
+          dokumentation           TYPE STANDARD TABLE OF funct,
+          exception_list          TYPE STANDARD TABLE OF rsexc,
+          export_parameter        TYPE STANDARD TABLE OF rsexp,
+          import_parameter        TYPE STANDARD TABLE OF rsimp,
+          changing_parameter      TYPE STANDARD TABLE OF rscha,
+          tables_parameter        TYPE STANDARD TABLE OF rstbl,
+          enha_exp_parameter      TYPE STANDARD TABLE OF rsexc,
+          enha_imp_parameter      TYPE STANDARD TABLE OF rsimp,
+          enha_cha_parameter      TYPE STANDARD TABLE OF rscha,
+          enha_tbl_parameter      TYPE STANDARD TABLE OF rstbl,
+          enha_dokumentation      TYPE STANDARD TABLE OF funct,
+          lt_source               TYPE rswsourcet,
+          ls_title                TYPE dsyst-doktitle,
+          ls_doc_hd               TYPE thead,
+          lt_doc_lines            TYPE STANDARD TABLE OF tline.
+
+    CALL FUNCTION 'FUNCTION_IMPORT_DOKU'
+      EXPORTING
+        funcname                = ms_tfdir-funcname    " Name of the function module
+        language                = sy-langu
+        with_enhancements       = with_enhancement "'X'
+        ignore_switches         = ignore_switches " SPACE
+      IMPORTING
+        global_flag             = global_flag    " Global interface
+        remote_call             = remote_call                " Function module can be called with
+        update_task             = update_task                " Function module luft in the update
+        short_text              = short_text                 " Short text for function module
+        freedate                = freedate
+        exception_class         = exception_class
+        remote_basxml_supported = remote_basxml_supported
+      TABLES
+        dokumentation           = dokumentation          " Short description of parameters
+        exception_list          = exception_list         " Table of exceptions
+        export_parameter        = export_parameter       " Table of export parameters
+        import_parameter        = import_parameter       " Table of import parameters
+        changing_parameter      = changing_parameter
+        tables_parameter        = tables_parameter       " Table of tables
+        enha_exp_parameter      = enha_exp_parameter
+        enha_imp_parameter      = enha_imp_parameter
+        enha_cha_parameter      = enha_cha_parameter
+        enha_tbl_parameter      = enha_tbl_parameter
+        enha_dokumentation      = enha_dokumentation
+      EXCEPTIONS
+        error_message           = 1
+        function_not_found      = 2
+        invalid_name            = 3
+        OTHERS                  = 4.
+    DATA lv_include TYPE tadir-obj_name.
+    lv_include = |{ ms_tfdir-pname+3 }U{ ms_tfdir-include }|.
+    READ REPORT lv_include INTO m_src.
+
+    CALL FUNCTION 'DOCU_READ'
+      EXPORTING
+        id                = 'FU'
+        langu             = sy-langu
+        object            = CONV doku_obj( ms_tfdir-funcname )
+        typ               = 'T'
+        version           = '0001'
+        suppress_template = 'X'
+      IMPORTING
+        doktitle          = ls_title
+        head              = ls_doc_hd
+      TABLES
+        line              = lt_doc_lines.
+
+
+    IF i_gen IS BOUND.
+      i_gen->main_text( REF #( mv_description ) ).
+      i_gen->add_text( m_src ).
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD zif_abap2md_info~generate_markdown.
+    TYPES: BEGIN OF row,
+             when TYPE string,
+             date TYPE string,
+             user TYPE string,
+           END OF row.
+    DATA: times TYPE STANDARD TABLE OF row.
+
+
+    times = VALUE #(
+                    ( when = `created`      date = |{ ms_hd-cdat DATE = USER }|  user = user_name( ms_hd-cnam ) )
+                    ( when = `last changed` date = |{ ms_hd-udat DATE = USER }|  user = user_name( ms_hd-unam ) )
+     ).
+
+    DATA(lo_markdown) = CAST zif_abap2md_text_generator( NEW lcl_markdown( ) ).
+
+    lo_markdown->heading( iv_level = 1 iv_text = 'ms_tadir-obj_name'
+                )->text( ms_text-text
+                )->new_paragraph(
+                )->text( mv_description
+                )->heading( iv_level = 2 iv_text = 'AUTHOR'
+                )->text( times ).
+
+    APPEND LINES OF lo_markdown->result( ) TO ct_text.
+  ENDMETHOD.
+
+  METHOD zif_abap2md_info~read_main.
+
+
+    DATA(tokens) = CAST lif_parser( NEW lcl_tag_def_parser( NEW lcl_comment_parser( m_src ) ) ).
+
+* Scan for tags
+
+  ENDMETHOD.
+
+ENDCLASS.
 
 CLASS lcl_doc_generator IMPLEMENTATION.
 
@@ -1378,7 +1581,7 @@ CLASS lcl_doc_generator IMPLEMENTATION.
     DATA: page       TYPE lcl_doc_generator=>page,
           section    TYPE lcl_doc_generator=>section,
           subsection TYPE lcl_doc_generator=>subsection.
-    DATA(gen) = CAST lif_text_generator( NEW lcl_markdown( ) ).
+    DATA(gen) = CAST zif_abap2md_text_generator( NEW lcl_markdown( ) ).
 
     LOOP AT m_pages INTO page.
       gen->heading(   iv_level = 1
