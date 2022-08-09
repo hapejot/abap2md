@@ -24,8 +24,8 @@ set( SAPNWRFC_LIB_ORIG ${CMAKE_CURRENT_SOURCE_DIR}/${CMAKE_HOST_SYSTEM_NAME}/nwr
 set(SAPNWRFC_LIBDIR ${CMAKE_CURRENT_BINARY_DIR})
 
 
-set(SAPNWRFC_LIBRARIES  ${SAPNWRFC_LIBDIR}/libsapnwrfc.so
-                        ${SAPNWRFC_LIBDIR}/libsapucum.so
+file(GLOB SAPNWRFC_LIBRARIES  ${SAPNWRFC_LIBDIR}/libsapnwrfc.*
+                        ${SAPNWRFC_LIBDIR}/libsapucum.*
                         )
 
 
