@@ -37,9 +37,12 @@ include_directories(${SAPNWRFC_INCLUDE_DIR})
 add_definitions(-DSAPwithUNICODE -DUNICODE -D_UNICODE -DSAPwithTHREADS)
 #link_directories(${CMAKE_CURRENT_SOURCE_DIR}/nwrfcsdk.${CMAKE_HOST_SYSTEM_NAME}/lib)
 
+file(GLOB SAPNWRFC_LIB_ORIG_FILES ${SAPNWRFC_LIB_ORIG}/*)
+
+
 add_custom_command(
     OUTPUT SAPNW_INST
-    COMMAND ${CMAKE_COMMAND} -E copy ${SAPNWRFC_LIB_ORIG}/*
+    COMMAND ${CMAKE_COMMAND} -E copy ${SAPNWRFC_LIB_ORIG_FILES}
                                     "${SAPNWRFC_LIBDIR}"
   )
 
