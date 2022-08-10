@@ -22,12 +22,15 @@ set( SAPNWRFC_LIB_ORIG ${CMAKE_CURRENT_SOURCE_DIR}/${CMAKE_HOST_SYSTEM_NAME}/nwr
 #)
 
 set(SAPNWRFC_LIBDIR ${CMAKE_CURRENT_BINARY_DIR})
+message("SAP lib dir: ${SAPNWRFC_LIBDIR}")
 
-
-file(GLOB SAPNWRFC_LIBRARIES  ${SAPNWRFC_LIBDIR}/libsapnwrfc.*
-                        ${SAPNWRFC_LIBDIR}/libsapucum.*
-                        )
-
+file(GLOB SAPNWRFC_LIBRARIES  ${SAPNWRFC_LIB_ORIG}/libsapnwrfc.so   ${SAPNWRFC_LIB_ORIG}/sapnwrfc.lib 
+                              ${SAPNWRFC_LIB_ORIG}/libsapucum.so    ${SAPNWRFC_LIB_ORIG}/libsapucum.lib
+)
+file(GLOB SAPNWRFC_COPY_LIBS  ${SAPNWRFC_LIB_ORIG}/libsapnwrfc*.so   ${SAPNWRFC_LIB_ORIG}/sapnwrfc*.dll
+                              ${SAPNWRFC_LIB_ORIG}/libsapucum*.so    ${SAPNWRFC_LIB_ORIG}/libsapucum*.dll
+)
+message("COPY LIBS: ${SAPNWRFC_COPY_LIBS}")
 
 include_directories(${SAPNWRFC_INCLUDE_DIR})
 
@@ -37,12 +40,11 @@ include_directories(${SAPNWRFC_INCLUDE_DIR})
 add_definitions(-DSAPwithUNICODE -DUNICODE -D_UNICODE -DSAPwithTHREADS)
 #link_directories(${CMAKE_CURRENT_SOURCE_DIR}/nwrfcsdk.${CMAKE_HOST_SYSTEM_NAME}/lib)
 
-file(GLOB SAPNWRFC_LIB_ORIG_FILES ${SAPNWRFC_LIB_ORIG}/*)
 
 
 add_custom_command(
     OUTPUT SAPNW_INST
-    COMMAND ${CMAKE_COMMAND} -E copy ${SAPNWRFC_LIB_ORIG_FILES}
+    COMMAND ${CMAKE_COMMAND} -E copy ${SAPNWRFC_COPY_LIBS}
                                     "${SAPNWRFC_LIBDIR}"
   )
 
