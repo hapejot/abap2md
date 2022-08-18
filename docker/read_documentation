@@ -1,0 +1,42 @@
+#!/usr/bin/env python3
+from pyrfc import Connection
+from tabulate import tabulate
+from pathlib import Path
+import sys
+from os import system
+
+p = Path("sapnwrfc.ini")
+print(f'path: {p} exists {p.exists()}')
+
+pcfg = Path("/config")
+print(f'path config: {pcfg.exists()}')
+
+pintro = pcfg / "intro.yaml"
+srcintro = None
+if pintro.exists():
+    with open(pintro, 'r') as fdintro:
+        srcintro = fdintro.read()
+
+pobjs = pcfg / "objects.lst"
+print(f'path {str(pobjs)} exists:{pobjs.exists()}')
+if pobjs.exists():
+    with open(pobjs, 'r') as fdobjs:
+        names = [x.strip() for x in fdobjs.readlines()]
+else:
+    names = sys.argv[1:]
+print('objects considered for documentation:')
+print(names)
+           
+conn = Connection( dest = 'sap' )
+if len(names) > 0:
+    result = conn.call('Z_ABAP2MD_GENERATE_MULTI', IT_NAMES = names)
+    doc = result['ET_DOC']
+    with open("/work/doc.md",'w') as fd:
+        if srcintro != None:
+            fd.write( f'---\n{srcintro}\n---\n' )
+        for x in doc:
+            fd.write(f'{x}\n')
+
+
+    system('pandoc -s /work/doc.md --lua-filter=diagram-generator.lua -o /work/doc.pdf')
+    system('pandoc -s /work/doc.md --lua-filter=diagram-generator.lua -o /work/doc.docx')

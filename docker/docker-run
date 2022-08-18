@@ -1,0 +1,1 @@
+docker run --rm -v $PWD/cfg:/config -v $PWD:/work hapejot/abap2md 
