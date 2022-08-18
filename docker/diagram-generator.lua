@@ -111,13 +111,19 @@ function Meta(meta)
   )
 end
 
+
 -- Call plantuml.jar with some parameters (cf. PlantUML help):
 local function plantuml(puml, filetype)
-  return pandoc.pipe(
-    java_path,
-    {"-jar", plantuml_path, "-t" .. filetype, "-pipe", "-charset", "UTF8"},
-    puml
-  )
+--  return pandoc.pipe(
+--    java_path,
+--    {"-jar", plantuml_path, "-t" .. filetype, "-pipe", "-charset", "UTF8"},
+--    puml
+--  )
+    return pandoc.pipe(
+        "plantuml", 
+        { "-t" .. filetype, "-pipe", "-charset", "UTF8"},
+        puml
+    )
 end
 
 -- Call dot (GraphViz) in order to generate the image
