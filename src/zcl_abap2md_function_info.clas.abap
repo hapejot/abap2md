@@ -192,10 +192,10 @@ CLASS zcl_abap2md_function_info IMPLEMENTATION.
         line              = lt_doc_lines.
 
 
-*    IF i_gen IS BOUND.
-*      i_gen->main_text( REF #( mv_description ) ).
-*      i_gen->add_text( m_src ).
-*    ENDIF.
+    IF i_gen IS BOUND.
+      i_gen->main_text( REF #( mv_description ) ).
+      i_gen->add_text( m_src ).
+    ENDIF.
 
   ENDMETHOD.
 
@@ -225,8 +225,6 @@ CLASS zcl_abap2md_function_info IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD zif_abap2md_info~read_main.
-
-* Scan for tags
 
   ENDMETHOD.
   METHOD extract_word.

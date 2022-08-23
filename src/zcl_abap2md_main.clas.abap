@@ -3,6 +3,15 @@ CLASS zcl_abap2md_main DEFINITION
   FINAL
   CREATE PUBLIC .
 **/
+* @page p2
+* @section s5 Main processor
+* This should explain what the main processor does and the steps.
+* The steps are important, since the first step doesn't read all the data
+* The second step reads the source code and parses the content in order to
+* find the relevant tags in the comments. This however is the major action.
+*/
+
+**/
 * This class extracts documentation from source code of other classes.
 * this source code has to be documented in a special fashion.
 * Also the standard document strings of the SE24 are included for documentation.
@@ -57,7 +66,9 @@ CLASS ZCL_ABAP2MD_MAIN IMPLEMENTATION.
 * before this can be run the object needs to be created and dev objects
 * have to be added using the *add* method.
 *
-* @return a complete markdown text with all documented components.
+* @return the document structure generated form the given development objects.
+*           this structure can be used to generate different output than the
+*           markdown. It contains all details in a more uniform manner.
 */
     DATA: name  TYPE obj_name,
           infos TYPE STANDARD TABLE OF REF TO zif_abap2md_info,
@@ -118,6 +129,8 @@ CLASS ZCL_ABAP2MD_MAIN IMPLEMENTATION.
 
   METHOD generate_single.
 **/
+* generates documentation for a single development object.
+*
 * @param iv_name is the class name of the class to be documented. This name can be in lower case.
 * @return a string table containing the raw mark down description of the class.
 */

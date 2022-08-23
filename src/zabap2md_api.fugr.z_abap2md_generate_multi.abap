@@ -7,6 +7,21 @@ FUNCTION z_abap2md_generate_multi.
 *"     VALUE(ET_DOC) TYPE  STRINGTAB
 *"----------------------------------------------------------------------
 **/
+* @page p2 Extraction Process
+* @section s4 Function module for generating multiple docs
+* In order to generate markdown one should use this function
+* module. This gives the markdown result as a table of lines.
+* this markdown can than be further processed by the client.
+*
+* The module is desigend as RFC so this can be used by remote
+* programs to retrieve the documentation. For example there is a
+* docker image that will process the output directly using pandoc
+* into PDF and DOCX formats, including processing of graph
+* descriptions.
+*/
+
+
+**/
 * FM
 * Generating the documentation for several sources into one result
 * document.

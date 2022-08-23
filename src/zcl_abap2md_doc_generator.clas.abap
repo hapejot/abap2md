@@ -135,13 +135,18 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
   METHOD first_word.
     IF c_chunk IS NOT INITIAL.
       DATA(x) = xsdbool( c_chunk[ 1 ] CA space ).
-      DATA(idx) = sy-fdpos.
-      DATA(left) = substring( val = c_chunk[ 1 ] len = idx ).
-      IF strlen( c_chunk[ 1 ] ) > idx.
-        DATA(right) = substring(  val = c_chunk[ 1 ] off = idx + 1 ).
-        c_chunk[ 1 ] = right.
+      IF x = abap_true.
+        DATA(idx) = sy-fdpos.
+        DATA(left) = substring( val = c_chunk[ 1 ] len = idx ).
+        IF strlen( c_chunk[ 1 ] ) > idx.
+          DATA(right) = substring(  val = c_chunk[ 1 ] off = idx + 1 ).
+          c_chunk[ 1 ] = right.
+        ENDIF.
+        r_result = left.
+      ELSE.
+        r_result = c_chunk[ 1 ].
+        CLEAR c_chunk[ 1 ].
       ENDIF.
-      r_result = left.
     ENDIF.
   ENDMETHOD.
 
@@ -155,18 +160,21 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
 
     gen ?= NEW zcl_abap2md_markdown( ).
 
+    SORT doc-pages BY name.
     LOOP AT doc-pages INTO page.
       gen->heading(   iv_level = 1
                       iv_text  = page-title
         )->text( page-text ).
+      SORT page-sections BY name.
       LOOP AT page-sections INTO section.
         gen->heading(   iv_level = 2
                         iv_text  = section-title
-          )->text( page-text ).
+          )->text( section-text ).
+        SORT section-subsections BY name.
         LOOP AT section-subsections INTO subsection.
           gen->heading(   iv_level = 3
                           iv_text  = subsection-title
-            )->text( page-text ).
+            )->text( subsection-text ).
         ENDLOOP.
       ENDLOOP.
     ENDLOOP.
@@ -310,6 +318,15 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
 
 
   METHOD zif_abap2md_doc_generator~add_text.
+**/
+* Reads a complete source file and interprets the comment sections.
+*
+* this method concentrates on the content in the file that might got into
+* the general document sections. This will ignore specific information about
+* the documented object but sort the pages and sections into the right place.
+*/
+
+
     DATA: name TYPE string.
     DATA(source) = CAST zif_abap2md_parser( NEW zcl_abap2md_tag_def_parser( NEW zcl_abap2md_comment_parser( i_code ) ) ).
     DO.
@@ -321,10 +338,19 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
         WHEN '@page'.
           chunk = source->next_chunk( ).
           name = first_word( CHANGING c_chunk = chunk ).
-          APPEND VALUE #( name = name ) TO doc-pages REFERENCE INTO mr_current_page.
-          mr_current_page->title = chunk[ 1 ].
-          mr_current_text = REF #( mr_current_page->text ).
+          mr_current_page = REF #( doc-pages[ name = name ] OPTIONAL ).
+          DATA(title) = VALUE #( chunk[ 1 ] OPTIONAL ).
+          IF mr_current_page IS INITIAL.
+            APPEND VALUE #( name = name ) TO doc-pages REFERENCE INTO mr_current_page.
+            mr_current_page->title = title.
+          ELSE.
+            IF mr_current_page->title IS INITIAL OR mr_current_page->title = mr_current_page->name.
+              mr_current_page->title = title.
+            ENDIF.
+          ENDIF.
           DELETE chunk INDEX 1.
+
+          mr_current_text = REF #( mr_current_page->text ).
           APPEND LINES OF chunk TO mr_current_text->*.
           CLEAR mr_current_section.
         WHEN '@section'.

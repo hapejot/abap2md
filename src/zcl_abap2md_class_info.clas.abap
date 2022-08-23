@@ -19,40 +19,6 @@ CLASS zcl_abap2md_class_info DEFINITION
 
   PRIVATE SECTION.
 
-*    TYPES: BEGIN OF class_descr,
-*             class_name TYPE seoclsname,
-*             brief      TYPE string,
-*           END OF class_descr.
-*    TYPES class_descr_t TYPE STANDARD TABLE OF class_descr.
-*
-*    TYPES: BEGIN OF parameter_info,
-*             parameter_name TYPE seocmpname,
-*             direction      TYPE char20,
-*             typ_type       TYPE seotyptype,
-*             data_type      TYPE rs38l_typ,
-*             description    TYPE rswsourcet,
-*           END OF parameter_info.
-*    TYPES parameter_info_t TYPE STANDARD TABLE OF parameter_info WITH EMPTY KEY.
-*    TYPES: BEGIN OF exception_info,
-*             exception_name TYPE seoclsname,
-*             data_type      TYPE rs38l_typ,
-*             description    TYPE rswsourcet,
-*           END OF exception_info.
-*    TYPES exception_info_t TYPE STANDARD TABLE OF exception_info WITH EMPTY KEY.
-*    TYPES: BEGIN OF method_info,
-*             method_name     TYPE seocpdname,
-*             docu_style      TYPE char10,
-*             exposure        TYPE seoexpose,
-*             abstract        TYPE char1,
-*             redefined       TYPE char1,
-*             static          TYPE char1,
-*             brief           TYPE rswsourcet,
-*             description     TYPE rswsourcet,
-*             return_info     TYPE parameter_info,
-*             parameter_infos TYPE parameter_info_t,
-*             exception_infos TYPE exception_info_t,
-*           END OF method_info.
-*    TYPES method_info_t TYPE STANDARD TABLE OF method_info.
     DATA ms_tadir TYPE tadir .
     DATA:
       mt_class_interface_info_set TYPE STANDARD TABLE OF rpyclci .
@@ -72,18 +38,6 @@ CLASS zcl_abap2md_class_info DEFINITION
     DATA:
       mt_sub_class_set            TYPE STANDARD TABLE OF vseoclif .
     DATA mt_redefinition_set TYPE seor_redefinitions_r .
-*    DATA: BEGIN OF ms_class_docu_structure,
-*            class_name     TYPE seoclsname,
-*            exposure       TYPE seoexpose,
-*            super_class    TYPE class_descr,
-*            interfaces     TYPE class_descr_t,
-*            friend_classes TYPE class_descr_t,
-*            sub_classes    TYPE class_descr_t,
-*            methods        TYPE method_info_t,
-*            descr_found    TYPE crmt_boolean,
-*            brief          TYPE rswsourcet,
-*            description    TYPE rswsourcet,
-*          END OF ms_class_docu_structure,
     DATA mr_info TYPE REF TO zabap2md_class_info .
     DATA mv_class_include TYPE programm .
     DATA mv_classpool TYPE programm .
@@ -214,19 +168,11 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 * Source Code
     READ REPORT mv_class_include INTO lt_source.
 
-    DATA(tokens) = CAST zif_abap2md_parser( NEW zcl_abap2md_tag_def_parser( NEW zcl_abap2md_comment_parser( lt_source ) ) ).
+    DATA lt_text TYPE zabap2md_text.
+    i_gen->main_text( REF #( lt_text ) ).
+    i_gen->add_text( lt_source ).
 
-* Scan for tags
-    DO.
-
-      DATA(chunk) = tokens->next_chunk( ).
-      IF chunk IS INITIAL.
-        EXIT.
-      ENDIF.
-
-      mr_info->text = chunk.
-
-    ENDDO.
+*      mr_info->text = parse_docu( REF #( lt_text ) ).
 
 
   ENDMETHOD.

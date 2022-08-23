@@ -31,15 +31,24 @@
 * This step can easily replaced by some other generating tool since
 * all sematinc information should be ready available in the documentation structure.
 *
-* ```graphviz
+* ```{.graphviz caption="Example of displaying a graph" width=50%}
 * digraph G {
-*    A -> C
-*    A -> D
-*    B -> E
-*    B -> F
+*    node [ shape = box ]
+*    MAIN -> GENERATE_MULTI
+*    GENERATE_MULTI -> GENERATE_DOC_STRUCT
+*    GENERATE_SINGLE -> GENERATE_DOC_STRUCT
+*    GENERATE_DOC_STRUCT -> ZCL_MAIN
 * }
 * ```
 *
+* ```{.plantuml caption="General Flow" width=50%}
+* Client -> Main : generate_multi
+* Main -> Info : read_main
+* Main -> Info : build_doc_structure
+* Info -> Generator : add text
+* Main -> Generator : get_text
+* Main -> Client : return text
+* ```
 */
 
 

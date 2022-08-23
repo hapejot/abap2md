@@ -56,6 +56,12 @@ CLASS ZCL_ABAP2MD_PROGRAM_INFO IMPLEMENTATION.
 
 
   METHOD try_read.
+**/
+* check TADIR to see if this name is registered as a program there.
+*
+* No globbing is done here. The name has to be exactly the one in TADIR.
+*/
+
     DATA: ls_tadir TYPE tadir.
     SELECT SINGLE *
                 FROM tadir
@@ -63,7 +69,7 @@ CLASS ZCL_ABAP2MD_PROGRAM_INFO IMPLEMENTATION.
                 AND object = 'PROG'
                 AND obj_name = @iv_name
                 INTO @ls_tadir.
-    IF sy-subrc = 0. " found this to be a class name...
+    IF sy-subrc = 0. " found this to be a program name...
       ro_result = NEW zcl_abap2md_program_info( ls_tadir ).
     ENDIF.
 
@@ -86,7 +92,9 @@ CLASS ZCL_ABAP2MD_PROGRAM_INFO IMPLEMENTATION.
 
     IF i_gen IS BOUND.
       DATA(doc) = i_gen->doc( ).
-      APPEND VALUE #( name = ms_tadir-obj_name title = ms_text-text ) TO  doc->programs REFERENCE INTO mr_info.
+      APPEND VALUE #(   name    = ms_tadir-obj_name
+                        title   = ms_text-text )
+            TO  doc->programs REFERENCE INTO mr_info.
 
       CALL FUNCTION 'SELOPTS_AND_PARAMS'
         EXPORTING
@@ -157,10 +165,6 @@ CLASS ZCL_ABAP2MD_PROGRAM_INFO IMPLEMENTATION.
     READ TEXTPOOL ms_tadir-obj_name LANGUAGE sy-langu INTO texttab.
 
     READ REPORT ms_tadir-obj_name INTO m_src.
-
-    DATA(tokens) = CAST zif_abap2md_parser( NEW zcl_abap2md_tag_def_parser( NEW zcl_abap2md_comment_parser( m_src ) ) ).
-
-* Scan for tags
 
   ENDMETHOD.
 
