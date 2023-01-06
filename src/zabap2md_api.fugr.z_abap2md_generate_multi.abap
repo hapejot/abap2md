@@ -1,8 +1,9 @@
-FUNCTION z_abap2md_generate_multi.
+FUNCTION Z_ABAP2MD_GENERATE_MULTI.
 *"----------------------------------------------------------------------
 *"*"Local Interface:
 *"  IMPORTING
 *"     VALUE(IT_NAMES) TYPE  ZABAP2MD_OBJECT_NAMES
+*"     VALUE(IX_OPTIONS) TYPE  ZABAP2MD_OPTIONS
 *"  EXPORTING
 *"     VALUE(ET_DOC) TYPE  STRINGTAB
 *"----------------------------------------------------------------------
@@ -39,7 +40,7 @@ FUNCTION z_abap2md_generate_multi.
             FROM tadir
             WHERE obj_name IN @name_range
             AND pgmid = 'R3TR'
-            AND object IN ( 'CLAS', 'PROG' )
+            AND object IN ( 'CLAS', 'PROG', 'INTF' )
             APPENDING TABLE @obj_names.
 
       " next try the same with TFDIR
@@ -52,7 +53,7 @@ FUNCTION z_abap2md_generate_multi.
       LOOP AT obj_names INTO DATA(name).
         lo_app->add( name ).
       ENDLOOP.
-      et_doc[] = lo_app->generate_multiple( ).
+      et_doc[] = lo_app->generate_multiple( ix_options ).
     CATCH zcx_abap2md_error.    "
   ENDTRY.
 

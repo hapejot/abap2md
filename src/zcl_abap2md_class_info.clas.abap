@@ -168,8 +168,7 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 * Source Code
     READ REPORT mv_class_include INTO lt_source.
 
-    DATA lt_text TYPE zabap2md_text.
-    i_gen->main_text( REF #( lt_text ) ).
+    i_gen->main_text( REF #( mr_info->text ) ).
     i_gen->add_text( lt_source ).
 
 *      mr_info->text = parse_docu( REF #( lt_text ) ).
@@ -645,13 +644,8 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 
 * Get class descriptor
     ls_class_interface_id-clsname = ms_tadir-obj_name.
-    CALL METHOD cl_oo_include_naming=>get_instance_by_cifkey
-      EXPORTING
-        cifkey = ls_class_interface_id
-      RECEIVING
-        cifref = lr_cifref
-      EXCEPTIONS
-        OTHERS = 1.
+
+    lr_cifref = cl_oo_include_naming=>get_instance_by_cifkey( ls_class_interface_id ).
 
     IF sy-subrc <> 0.
       RAISE EXCEPTION TYPE zcx_abap2md_error.

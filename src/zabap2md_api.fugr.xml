@@ -54,6 +54,10 @@
        <PARAMETER>IT_NAMES</PARAMETER>
        <TYP>ZABAP2MD_OBJECT_NAMES</TYP>
       </RSIMP>
+      <RSIMP>
+       <PARAMETER>IX_OPTIONS</PARAMETER>
+       <TYP>ZABAP2MD_OPTIONS</TYP>
+      </RSIMP>
      </IMPORT>
      <EXPORT>
       <RSEXP>
@@ -64,6 +68,10 @@
      <DOCUMENTATION>
       <RSFDO>
        <PARAMETER>IT_NAMES</PARAMETER>
+       <KIND>P</KIND>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>IX_OPTIONS</PARAMETER>
        <KIND>P</KIND>
       </RSFDO>
       <RSFDO>

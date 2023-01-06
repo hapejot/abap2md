@@ -18,6 +18,9 @@ CLASS zcl_abap2md_doc_generator DEFINITION
     METHODS generate_markdown
       CHANGING
         ct_text TYPE stringtab.
+    METHODS options
+      IMPORTING
+        ix_options TYPE zabap2md_options.
     TYPES: BEGIN OF subsection,
              name  TYPE string,
              title TYPE string,
@@ -84,7 +87,8 @@ CLASS zcl_abap2md_doc_generator DEFINITION
           mr_main_text          TYPE REF TO zabap2md_text.
     DATA: BEGIN OF m_cache,
             exposure TYPE dd07v_tab,
-          END OF m_cache.
+          END OF m_cache,
+          mx_options TYPE zabap2md_options.
 ENDCLASS.
 
 
@@ -234,11 +238,19 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
 
     DATA code TYPE stringtab.
 
-    i_gen->heading( iv_level = 2
-            iv_text =  |{ exposure_name(  i_method-exposure ) } {
-                            static_name( i_method-static ) } { 'Method'(001) } {
-                            explained_name( i_name = |{ i_method-name }|
-            i_title = i_method-title ) }| ).
+    CASE mx_options-methods-hdr_include_description.
+      WHEN abap_true.
+        i_gen->heading( iv_level = 2
+                iv_text =  |{ exposure_name(  i_method-exposure ) } {
+                                static_name( i_method-static ) } { 'Method'(001) } {
+                                explained_name( i_name = |{ i_method-name }|
+                                                i_title = i_method-title ) }| ).
+      WHEN OTHERS.
+        i_gen->heading( iv_level = 2
+                iv_text =  |{ exposure_name(  i_method-exposure ) } {
+                                static_name( i_method-static ) } { 'Method'(001) } { i_method-name }| ).
+    ENDCASE.
+
     i_gen->text( i_method-title ).
 
     code = VALUE #( ( |METHOD { i_method-name }| ) ).
@@ -391,4 +403,9 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
     mr_main_text = i_text.
     mr_current_text = mr_main_text.
   ENDMETHOD.
+
+  METHOD options.
+    mx_options = ix_options.
+  ENDMETHOD.
+
 ENDCLASS.

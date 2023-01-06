@@ -30,8 +30,9 @@ CLASS zcl_abap2md_main DEFINITION
       RAISING
         zcx_abap2md_error .
     METHODS generate_multiple
+      IMPORTING ix_options    TYPE zabap2md_options OPTIONAL
       RETURNING
-        VALUE(r_text) TYPE stringtab.
+                VALUE(r_text) TYPE stringtab.
     METHODS add
       IMPORTING
         i_name TYPE obj_name.
@@ -52,7 +53,7 @@ ENDCLASS.
 
 
 
-CLASS ZCL_ABAP2MD_MAIN IMPLEMENTATION.
+CLASS zcl_abap2md_main IMPLEMENTATION.
 
 
   METHOD add.
@@ -101,6 +102,8 @@ CLASS ZCL_ABAP2MD_MAIN IMPLEMENTATION.
     DATA: name  TYPE obj_name,
           infos TYPE STANDARD TABLE OF REF TO zif_abap2md_info.
     DATA(main_gen) = NEW zcl_abap2md_doc_generator( REF #( r_text ) ).
+
+    main_gen->options( ix_options ).
     LOOP AT mt_names INTO name.
       TRY.
           DATA(lo_info) = read_object_info( name ).

@@ -62,7 +62,8 @@ DATA:
   path      TYPE zcl_abap2md_local_file=>t_dir,
   files     TYPE filetable,
   obj_names TYPE STANDARD TABLE OF zcl_abap2md_main=>obj_name,
-  obj_name  TYPE zcl_abap2md_main=>obj_name.
+  obj_name  TYPE zcl_abap2md_main=>obj_name,
+  options   TYPE zabap2md_options.
 SELECT-OPTIONS:
     s_objs FOR obj_name.
 PARAMETERS: p_path  TYPE zcl_abap2md_local_file=>t_dir DEFAULT 'abap-doc.md'.
@@ -96,10 +97,11 @@ START-OF-SELECTION.
 
   CALL FUNCTION 'Z_ABAP2MD_GENERATE_MULTI'
     EXPORTING
-      it_names = obj_names
+      it_names   = obj_names
+      ix_options = options
     IMPORTING
-      et_doc   = doc.
+      et_doc     = doc.
 
   DATA(file) = NEW zcl_abap2md_local_file( ).
   file->add_text( doc ).
-  file->save( i_path = P_path ).
+  file->save( i_path = p_path ).
