@@ -123,4 +123,8 @@ CLASS zcl_abap2md_tag_def_parser IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD zif_abap2md_parser~next_token.
+
+  ENDMETHOD.
+
 ENDCLASS.

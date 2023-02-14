@@ -19,6 +19,12 @@
     <TCODE>ZABAP2MD</TCODE>
     <TTEXT>Create Markdown Docs from ABAP</TTEXT>
    </TSTCT>
+   <I18N_TPOOL>
+    <TSTCT>
+     <SPRSL>W</SPRSL>
+     <TTEXT>Create Markdown Docs from ABAP</TTEXT>
+    </TSTCT>
+   </I18N_TPOOL>
   </asx:values>
  </asx:abap>
 </abapGit>
