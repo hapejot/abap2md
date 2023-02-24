@@ -3,7 +3,14 @@ INHERITING FROM zcl_abap2md_doc_parser
   PUBLIC
 
   CREATE PUBLIC .
-
+**/
+* The method parser is a specialized parser that populates all information it gets
+* from the method source code into the corresponding structres in the global
+* document structure.
+*
+* This also means there could be a section related to a page that will be shown right in front
+* of the resulting document.
+*/
   PUBLIC SECTION.
     CLASS-METHODS create
       IMPORTING
