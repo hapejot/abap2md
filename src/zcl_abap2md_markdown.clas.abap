@@ -118,7 +118,7 @@ CLASS zcl_abap2md_markdown IMPLEMENTATION.
       WHEN cl_abap_typedescr=>kind_table.
         ASSIGN iv_text TO <lt_text>.
         LOOP AT <lt_text> ASSIGNING <lv_text>.
-          APPEND |{ lv_first_out WIDTH = 1 }  { <lv_text> }| TO mt_text.
+          APPEND |{ lv_first_out WIDTH = 4 }  { <lv_text> }| TO mt_text.
           CLEAR lv_first_out.
         ENDLOOP.
       WHEN OTHERS.

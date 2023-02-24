@@ -19,30 +19,22 @@ CLASS zcl_abap2md_class_info DEFINITION
 
   PRIVATE SECTION.
 
-    DATA ms_tadir TYPE tadir .
-    DATA:
-      mt_class_interface_info_set TYPE STANDARD TABLE OF rpyclci .
-    DATA:
-      mt_attribute_set            TYPE STANDARD TABLE OF rpyclat .
-    DATA:
-      mt_method_set               TYPE STANDARD TABLE OF rpyclme .
-    DATA:
-      mt_parameter_set            TYPE STANDARD TABLE OF rpyclpa .
-    DATA:
-      mt_meta_relation_set        TYPE STANDARD TABLE OF rpyclmr .
-    DATA:
-      mt_exception_set            TYPE STANDARD TABLE OF rpyclex .
-    DATA:
-      mt_friends_relation_set     TYPE STANDARD TABLE OF rpyclfr .
-    DATA mt_method_include_set TYPE seop_methods_w_include .
-    DATA:
-      mt_sub_class_set            TYPE STANDARD TABLE OF vseoclif .
-    DATA mt_redefinition_set TYPE seor_redefinitions_r .
-    DATA mr_info TYPE REF TO zabap2md_class_info .
-    DATA mv_class_include TYPE programm .
-    DATA mv_classpool TYPE programm .
-    DATA:
-      mv_refs TYPE STANDARD TABLE OF scr_glref .
+    DATA: ms_tadir                    TYPE tadir,
+          mt_class_interface_info_set TYPE STANDARD TABLE OF rpyclci,
+          mt_attribute_set            TYPE STANDARD TABLE OF rpyclat,
+          mt_method_set               TYPE STANDARD TABLE OF rpyclme,
+          mt_parameter_set            TYPE STANDARD TABLE OF rpyclpa,
+          mt_meta_relation_set        TYPE STANDARD TABLE OF rpyclmr,
+          mt_exception_set            TYPE STANDARD TABLE OF rpyclex,
+          mt_friends_relation_set     TYPE STANDARD TABLE OF rpyclfr,
+          mt_method_include_set       TYPE seop_methods_w_include,
+          mt_sub_class_set            TYPE STANDARD TABLE OF vseoclif,
+          mt_redefinition_set         TYPE seor_redefinitions_r,
+          mr_info                     TYPE REF TO zabap2md_class_info,
+          mv_class_include            TYPE programm,
+          mv_classpool                TYPE programm,
+          mv_refs                     TYPE STANDARD TABLE OF scr_glref,
+          doc                         TYPE REF TO zabap2md_doc_structure.
 
     METHODS build_class_info
       IMPORTING
@@ -91,7 +83,7 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
           ls_class_descr          TYPE zabap2md_common_info,
           ls_class_interface_info TYPE rpyclci.
 
-    DATA(doc) = i_gen->doc( ).
+    doc = i_gen->doc( ).
 
     ls_class_interface_info = mt_class_interface_info_set[ 1 ].
 
@@ -277,8 +269,13 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 
 *   Parse docu
       IF lt_source IS NOT INITIAL.
-        lr_meth->text = lt_source.
-        parse_method_docu( CHANGING cs_method_info = lr_meth->* ).
+*        lr_meth->text = lt_source.
+        DATA(method_parser) = zcl_abap2md_method_parser=>create(    i_class = ls_method-clsname
+                                                                    i_method = ls_method-cmpname
+                                                                    i_code = lt_source
+                                                                    i_doc  = doc         ).
+        method_parser->parse( ).
+*        parse_method_docu( CHANGING cs_method_info = lr_meth->* ).
       ENDIF.
 
 

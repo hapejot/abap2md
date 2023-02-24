@@ -3,9 +3,9 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <VSEOCLASS>
-    <CLSNAME>ZCL_ABAP2MD_TAG_DEF_PARSER</CLSNAME>
+    <CLSNAME>ZCL_ABAP2MD_METHOD_PARSER</CLSNAME>
     <LANGU>E</LANGU>
-    <DESCRIPT>Tag Definition Parser</DESCRIPT>
+    <DESCRIPT>Parses Comments in a Method</DESCRIPT>
     <STATE>1</STATE>
     <CLSCCINCL>X</CLSCCINCL>
     <FIXPT>X</FIXPT>

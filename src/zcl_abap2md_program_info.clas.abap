@@ -41,11 +41,17 @@ CLASS zcl_abap2md_program_info DEFINITION
       CHANGING
                 text            TYPE rswsourcet
       RETURNING VALUE(r_result) TYPE string.
+    METHODS get_field_title
+      IMPORTING
+        i_table_name TYPE ddobjname
+        i_field_name TYPE fieldname OPTIONAL
+      RETURNING
+        VALUE(title) TYPE string.
 ENDCLASS.
 
 
 
-CLASS ZCL_ABAP2MD_PROGRAM_INFO IMPLEMENTATION.
+CLASS zcl_abap2md_program_info IMPLEMENTATION.
 
 
   METHOD constructor.
@@ -105,19 +111,50 @@ CLASS ZCL_ABAP2MD_PROGRAM_INFO IMPLEMENTATION.
           OTHERS  = 4.
       IF 0 = sy-subrc.
 
-        mr_info->params = VALUE #( FOR <x> IN pars
-                                    ( name = <x>-name ) ).
+        LOOP AT pars REFERENCE INTO DATA(par).
+          APPEND VALUE #( name = par->name ) TO mr_info->params REFERENCE INTO DATA(par_info).
+          SPLIT par->dbfield AT '-' INTO DATA(table_name) DATA(field_name).
+          IF table_name IS NOT INITIAL.
+            par_info->title = get_field_title(  i_table_name = CONV #( table_name )
+                                                i_field_name = CONV #( field_name ) ).
+          ENDIF.
+        ENDLOOP.
       ENDIF.
 
 
-      DATA lt_text TYPE zabap2md_text.
-      i_gen->main_text( REF #( lt_text ) ).
-      i_gen->add_text( m_src ).
+*      DATA lt_text TYPE zabap2md_text.
+*      i_gen->main_text( REF #( lt_text ) ).
+*      i_gen->add_text( m_src ).
+*
+*      mr_info->text = parse_docu( REF #( lt_text ) ).
 
-      mr_info->text = parse_docu( REF #( lt_text ) ).
+
+      DATA(cut) = zcl_abap2md_report_parser=>create(
+                  i_code   = m_src
+                  i_doc    = doc
+                  i_report_name = ms_tadir-obj_name
+              ).
+      cut->parse( ).
+
     ENDIF.
 
   ENDMETHOD.
+
+  METHOD get_field_title.
+
+    CALL FUNCTION 'DDIF_FIELDLABEL_GET'
+      EXPORTING
+        tabname   = i_table_name    " Name of the table (of the type) for which information is req
+        fieldname = i_field_name    " Use Parameter LFIELDNAME Instead
+      IMPORTING
+        label     = title
+      EXCEPTIONS
+        OTHERS    = 0.  " if there is no title there is no title.
+
+
+  ENDMETHOD.
+
+
 
 
   METHOD find_param.

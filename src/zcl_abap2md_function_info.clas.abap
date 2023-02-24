@@ -39,6 +39,11 @@ CLASS zcl_abap2md_function_info DEFINITION
                 iv_uname       TYPE syst_uname
       RETURNING VALUE(rv_name) TYPE string.
     METHODS parse_docu.
+
+
+    "! extract one word from the text
+    "! @parameter text | text
+    "! @parameter r_result | word that was extracted
     METHODS extract_word CHANGING  text            TYPE rswsourcet
                          RETURNING
                                    VALUE(r_result) TYPE string.

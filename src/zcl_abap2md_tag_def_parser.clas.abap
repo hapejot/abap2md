@@ -4,12 +4,15 @@ CLASS zcl_abap2md_tag_def_parser DEFINITION
   CREATE PUBLIC .
 
   PUBLIC SECTION.
-    INTERFACES zif_abap2md_parser.
+
+    INTERFACES zif_abap2md_parser .
+
     METHODS constructor
       IMPORTING
-        i_src  TYPE REF TO zif_abap2md_parser OPTIONAL
-        i_text TYPE REF TO zabap2md_text OPTIONAL
+        !i_src  TYPE REF TO zif_abap2md_parser OPTIONAL
+        !i_text TYPE REF TO zabap2md_text OPTIONAL
           PREFERRED PARAMETER i_src .
+  PROTECTED SECTION.
   PRIVATE SECTION.
     TYPES: BEGIN OF pair,
              keyword TYPE string,
@@ -18,13 +21,17 @@ CLASS zcl_abap2md_tag_def_parser DEFINITION
     DATA src TYPE REF TO zif_abap2md_parser.
     DATA mt_chunk TYPE rswsourcet.
     DATA mode TYPE c.
-    DATA: pairs TYPE STANDARD TABLE OF pair,
-          p     TYPE pair.
+    DATA: pairs     TYPE STANDARD TABLE OF pair,
+          p         TYPE pair,
+          m_regex   TYPE REF TO cl_abap_regex,
+          m_pushed  TYPE zabap2md_token,
+          m_matcher TYPE REF TO cl_abap_matcher.
 ENDCLASS.
 
 
 
 CLASS zcl_abap2md_tag_def_parser IMPLEMENTATION.
+
 
   METHOD constructor.
 
@@ -35,6 +42,7 @@ CLASS zcl_abap2md_tag_def_parser IMPLEMENTATION.
     ENDIF.
 
   ENDMETHOD.
+
 
   METHOD zif_abap2md_parser~next_chunk.
     DATA out TYPE REF TO string.
@@ -123,8 +131,84 @@ CLASS zcl_abap2md_tag_def_parser IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD zif_abap2md_parser~next_token.
 
+  METHOD zif_abap2md_parser~next_token.
+    DATA: rules TYPE stringtab,
+          token TYPE zabap2md_token,
+          lines TYPE stringtab.
+    rules = VALUE #(    ( `^ *([0-9]{1,4}[.-][0-9]{1,2}[.-][0-9]{1,4})` )  " #1
+                        ( `@([a-zA-Z0-9]+) *` )                     " #2
+                        ( `([.,;:/])` )                              " #3
+                        ( `([^ .,;:/]+) *` )                         " #4
+                        ( `^( *)$` )                                " #5
+
+                        ).
+    IF m_regex IS INITIAL.
+      CONCATENATE LINES OF rules INTO DATA(pattern) SEPARATED BY '|'.
+      m_regex = NEW cl_abap_regex( pattern ).
+    ENDIF.
+    IF m_matcher IS INITIAL.
+      DO.
+        token = src->next_token( ).
+        IF token-type = 'START' OR token IS INITIAL.
+          EXIT.
+        ENDIF.
+      ENDDO.
+      IF token-type = 'START'.
+        DO.
+          token = src->next_token( ).
+          IF token-type = 'LINE'.
+            APPEND token-value TO lines.
+          ELSE.
+            EXIT.
+          ENDIF.
+        ENDDO.
+        m_matcher = m_regex->create_matcher(
+            table         = lines    " Table to be Searched in
+        ).
+        m_pushed = VALUE #( type = 'START' line = 1 ).
+      ENDIF.
+    ENDIF.
+    IF m_pushed IS INITIAL AND m_matcher IS BOUND.
+      IF m_matcher->find_next( ).
+        DATA(s1) = m_matcher->get_submatch( 1 ).
+        DATA(s2) = m_matcher->get_submatch( 2 ).
+        DATA(s3) = m_matcher->get_submatch( 3 ).
+        DATA(s4) = m_matcher->get_submatch( 4 ).
+        DATA(s5) = m_matcher->get_submatch( 5 ).
+        DATA(line) = m_matcher->get_line( ).
+        IF s2 IS NOT INITIAL.
+          r_result = VALUE #(  type = 'CMD' value = s2 line = line ).
+        ELSEIF s3 IS NOT INITIAL.
+          r_result = VALUE #( type = 'SEP' value = s3 line = line ).
+        ELSEIF s4 IS NOT INITIAL.
+          r_result = VALUE #( type = 'WORD' value = s4 line = line ).
+        ELSEIF s1 IS NOT INITIAL.
+          DATA year(4) TYPE c.
+          DATA month(2) TYPE c.
+          DATA day(2) TYPE c.
+          SPLIT s1 AT '.' INTO day month year.
+          IF year IS INITIAL.
+            SPLIT s1 AT '-' INTO year month day.
+          ENDIF.
+          r_result = VALUE #(   type = 'DATE'
+                                value = |{ year }{
+                                            month ALIGN = RIGHT PAD = '0' WIDTH = 2 }{
+                                            day ALIGN = RIGHT PAD = '0' WIDTH = 2 }|
+                                line = line ).
+        ELSE. " the only alternative with an empty result so we cannot check for it.
+          r_result = VALUE #( type = 'PARSEP' line = line ).
+        ENDIF.
+      ELSE.
+        CLEAR m_matcher.
+        r_result = VALUE #( type = 'END' ).
+      ENDIF.
+    ELSE.
+      r_result = m_pushed.
+      CLEAR m_pushed.
+    ENDIF.
   ENDMETHOD.
+
+
 
 ENDCLASS.

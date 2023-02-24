@@ -79,6 +79,9 @@ CLASS zcl_abap2md_doc_generator DEFINITION
         iv_static      TYPE zabap2md_method_info-static
       RETURNING
         VALUE(rv_name) TYPE string.
+    METHODS parse_v1
+      IMPORTING
+        i_code TYPE stringtab.
 
     DATA: mr_current_page       TYPE REF TO zabap2md_page,
           mr_current_section    TYPE REF TO zabap2md_section,
@@ -225,7 +228,9 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
                           i_gen = i_gen ).
 
     LOOP AT i_cls-methods INTO DATA(method).
-      IF method-title IS NOT INITIAL OR method-text IS NOT INITIAL.
+      IF    method-title IS NOT INITIAL
+            OR method-changes IS NOT INITIAL
+            OR method-text IS NOT INITIAL.
         gen_method(         i_method = method
                             i_gen    = i_gen ).
       ENDIF.
@@ -280,6 +285,16 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
     ENDIF.
 
 
+    IF i_method-changes IS NOT INITIAL.
+      i_gen->heading( iv_level = 2 iv_text = |Changes| ).
+      DATA(changes) = i_method-changes.
+      SORT changes BY date DESCENDING.
+      LOOP AT changes REFERENCE INTO DATA(change).
+        i_gen->definition(  iv_text = change->text
+                            iv_def  = |{ change->date DATE = USER }|    ).
+      ENDLOOP.
+    ENDIF.
+
   ENDMETHOD.
 
 
@@ -319,8 +334,16 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
   METHOD gen_param_def_list.
 
     LOOP AT i_params INTO DATA(param).
+      DATA(txt) = VALUE stringtab( ).
+      IF param-title IS NOT INITIAL.
+        APPEND param-title TO txt.
+        APPEND `` TO txt.
+      ENDIF.
       IF param-text IS NOT INITIAL.
-        i_gen->definition(  iv_text = param-text
+        APPEND LINES OF param-text TO txt.
+      ENDIF.
+      IF txt IS NOT INITIAL.
+        i_gen->definition(  iv_text = txt
                             iv_def  = param-name    ).
       ENDIF.
     ENDLOOP.
@@ -338,6 +361,11 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
 * the documented object but sort the pages and sections into the right place.
 */
 
+    parse_v1( i_code ).
+
+  ENDMETHOD.
+
+  METHOD parse_v1.
 
     DATA: name TYPE string.
     DATA(source) = CAST zif_abap2md_parser( NEW zcl_abap2md_tag_def_parser( NEW zcl_abap2md_comment_parser( i_code ) ) ).
@@ -391,7 +419,11 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
           APPEND LINES OF chunk TO mr_current_text->*.
       ENDCASE.
     ENDDO.
+
+
   ENDMETHOD.
+
+
 
 
   METHOD zif_abap2md_doc_generator~doc.
