@@ -9,27 +9,42 @@ DATA: ctab         TYPE stringtab,
       c_xmldoc     TYPE string,
       names        TYPE zabap2md_object_names,
       options      TYPE zabap2md_options,
-      doc          TYPE stringtab.
+      doc          TYPE stringtab,
+      values       TYPE vrm_values,
+      elements     TYPE STANDARD TABLE OF zabap2md_docelem,
+      field_name   TYPE fieldname VALUE 'P_OBJSET'.
+
+PARAMETERS:
+    p_objset TYPE seoclsname AS LISTBOX VISIBLE LENGTH 35.
+
+INITIALIZATION.
+  DATA(html) = NEW zcl_abap2md_html( ).
 
 
-DATA(html) = NEW zcl_abap2md_html( ).
+AT SELECTION-SCREEN OUTPUT.
+  SELECT * FROM zabap2md_docelem
+        INTO TABLE @elements.
+  CLEAR values.
+  LOOP AT elements INTO DATA(x) GROUP BY x-docset.
+    APPEND VALUE #( key = x-docset text = x-docset ) TO values.
+  ENDLOOP.
 
+  CALL FUNCTION 'VRM_SET_VALUES'
+    EXPORTING
+      id     = 'P_OBJSET'
+      values = values.
 
-names = VALUE #(
-*  ( 'ZR_ABAP2MD_MAIN' )
-*  ( 'ZCL_ABAP2MD_*' )
-*  ( 'ZCX_ABAP2MD_*' )
-*  ( |ZABAP2MD_*| )
-*  ( |ZIF_ABAP2MD_*| )
-*  ( |Z_ABAP2MD*| )
-   ( |ZCL_CORE*_PROCESSING| )
-).
+START-OF-SELECTION.
+  CLEAR names.
+  LOOP AT elements INTO DATA(element) WHERE docset = p_objset.
+    APPEND element-name TO names.
+  ENDLOOP.
 
-CALL FUNCTION 'Z_ABAP2MD_GENERATE_MULTI'
-  EXPORTING
-    it_names   = names
-    ix_options = options
-  IMPORTING
-    et_doc     = doc.    " Table with Strings
+  CALL FUNCTION 'Z_ABAP2MD_GENERATE_MULTI'
+    EXPORTING
+      it_names   = names
+      ix_options = options
+    IMPORTING
+      et_doc     = doc.    " Table with Strings
 
-html->render_md_as_html( doc ).
+  html->render_md_as_html( doc ).
