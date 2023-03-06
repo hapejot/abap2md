@@ -160,10 +160,17 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 * Source Code
     READ REPORT mv_class_include INTO lt_source.
 
-    i_gen->main_text( REF #( mr_info->text ) ).
-    i_gen->add_text( lt_source ).
+*    i_gen->main_text( REF #( mr_info->text ) ).
+*    i_gen->add_text( lt_source ).
 
 *      mr_info->text = parse_docu( REF #( lt_text ) ).
+
+    DATA(parser) = zcl_abap2md_class_def_parser=>create(
+                i_code   = lt_source
+                i_doc    = i_gen->doc( )
+                i_name   = |{ ls_class_interface_info-clsname }|
+            ).
+    parser->parse( ).
 
 
   ENDMETHOD.

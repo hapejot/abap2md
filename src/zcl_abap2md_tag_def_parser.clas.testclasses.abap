@@ -26,6 +26,9 @@ CLASS ltcl_main IMPLEMENTATION.
                     ( `* Text.` )
                     ( `* @subsection subsection2 The second subsection` )
                     ( `* More text.` )
+                    ( |* ```\{.plantuml caption="General Flow" width=50%\}| )
+                    ( |* Client -> Main: generate_multi| )
+                    ( |* ```| )
                     ( `*/` )
                     ( ` ` )
                     ( `**/ @page page2 Another page` )
@@ -94,6 +97,20 @@ CLASS ltcl_main IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = 'More' line = 11 ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = 'text' line = 11 ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'SEP' value = '.' line = 11 ) act = cut->next_token( ) ).
+
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = |```\{.plantuml| line = 12 ) act = cut->next_token( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = |caption="General| line = 12 ) act = cut->next_token( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = |Flow"| line = 12 ) act = cut->next_token( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = |width=50%\}| line = 12 ) act = cut->next_token( ) ).
+
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = |Client| line = 13 ) act = cut->next_token( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = |->| line = 13 ) act = cut->next_token( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = |Main| line = 13 ) act = cut->next_token( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'SEP' value = |:| line = 13 ) act = cut->next_token( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = |generate_multi| line = 13 ) act = cut->next_token( ) ).
+
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = |```| line = 14 ) act = cut->next_token( ) ).
+
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'END' ) act = cut->next_token( ) ).
 
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'START' line = 1 ) act = cut->next_token( ) ).
