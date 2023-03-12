@@ -17,6 +17,7 @@ INHERITING FROM zcl_abap2md_doc_parser
   PROTECTED SECTION.
     METHODS handle_cmd REDEFINITION.
     METHODS handle_end REDEFINITION.
+    methods handle_date REDEFINITION.
   PRIVATE SECTION.
     DATA: m_report_name  TYPE progn,
           current_report TYPE REF TO zabap2md_program_info.
@@ -67,6 +68,14 @@ CLASS zcl_abap2md_report_parser IMPLEMENTATION.
   METHOD handle_end.
     super->handle_end( ).
     current_text = REF #( current_report->text ).
+  ENDMETHOD.
+
+  METHOD handle_date.
+
+    APPEND VALUE #( date = token-value ) TO current_report->changes REFERENCE INTO DATA(current_change).
+    current_text = REF #( current_change->text ).
+    next_token( ).
+
   ENDMETHOD.
 
 ENDCLASS.

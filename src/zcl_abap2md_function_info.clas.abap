@@ -180,7 +180,14 @@ CLASS zcl_abap2md_function_info IMPLEMENTATION.
     lv_include = |{ ms_tfdir-pname+3 }U{ ms_tfdir-include }|.
     READ REPORT lv_include INTO m_src.
 
-    parse_docu( ).
+*    parse_docu( ).
+
+    DATA(parser) = zcl_abap2md_function_parser=>create(
+                i_code   = m_src
+                i_doc    = i_gen->doc( )
+                i_name   = |{ ms_tfdir-funcname }|
+            ).
+    parser->parse( ).
 
     CALL FUNCTION 'DOCU_READ'
       EXPORTING
@@ -197,10 +204,10 @@ CLASS zcl_abap2md_function_info IMPLEMENTATION.
         line              = lt_doc_lines.
 
 
-    IF i_gen IS BOUND.
-      i_gen->main_text( REF #( mv_description ) ).
-      i_gen->add_text( m_src ).
-    ENDIF.
+*    IF i_gen IS BOUND.
+*      i_gen->main_text( REF #( mv_description ) ).
+*      i_gen->add_text( m_src ).
+*    ENDIF.
 
   ENDMETHOD.
 

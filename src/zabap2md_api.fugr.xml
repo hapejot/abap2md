@@ -17,6 +17,11 @@
        <PARAMETER>IT_NAMES</PARAMETER>
        <TYP>ZABAP2MD_OBJECT_NAMES</TYP>
       </RSIMP>
+      <RSIMP>
+       <PARAMETER>IV_OBJ_SET</PARAMETER>
+       <OPTIONAL>X</OPTIONAL>
+       <TYP>ZABAP2MD_DOCELEM-DOCSET</TYP>
+      </RSIMP>
      </IMPORT>
      <EXPORT>
       <RSEXP>
@@ -31,6 +36,10 @@
      <DOCUMENTATION>
       <RSFDO>
        <PARAMETER>IT_NAMES</PARAMETER>
+       <KIND>P</KIND>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>IV_OBJ_SET</PARAMETER>
        <KIND>P</KIND>
       </RSFDO>
       <RSFDO>
@@ -55,6 +64,11 @@
        <TYP>ZABAP2MD_OBJECT_NAMES</TYP>
       </RSIMP>
       <RSIMP>
+       <PARAMETER>IV_OBJ_SET</PARAMETER>
+       <OPTIONAL>X</OPTIONAL>
+       <TYP>ZABAP2MD_DOCELEM-DOCSET</TYP>
+      </RSIMP>
+      <RSIMP>
        <PARAMETER>IX_OPTIONS</PARAMETER>
        <TYP>ZABAP2MD_OPTIONS</TYP>
       </RSIMP>
@@ -68,6 +82,10 @@
      <DOCUMENTATION>
       <RSFDO>
        <PARAMETER>IT_NAMES</PARAMETER>
+       <KIND>P</KIND>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>IV_OBJ_SET</PARAMETER>
        <KIND>P</KIND>
       </RSFDO>
       <RSFDO>

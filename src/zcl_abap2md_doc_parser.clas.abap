@@ -145,16 +145,15 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
         next_token( ).
         name = token-value.
         line = token-line.
-        current_page = REF #( doc->pages[ name = name ] OPTIONAL ).
         next_token( ).
-        DATA(title) = read_words( line  ).
+        DATA(title) = read_words( line ).
+        current_page = REF #( doc->pages[ name = name ] OPTIONAL ).
         IF current_page IS INITIAL.
           APPEND VALUE #( name = name ) TO doc->pages REFERENCE INTO current_page.
+          SORT doc->pages BY name.
+        ENDIF.
+        IF current_page->title IS INITIAL.
           current_page->title = title.
-        ELSE.
-          IF current_page->title IS INITIAL OR current_page->title = current_page->name.
-            current_page->title = title.
-          ENDIF.
         ENDIF.
         current_text = REF #( current_page->text ).
 
@@ -162,16 +161,25 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
         token = source->next_token( ).
         name = token-value.
         line = token-line.
-        APPEND VALUE #( name = name ) TO current_page->sections REFERENCE INTO current_section.
+        token = source->next_token( ).
+        current_section = REF #( current_page->sections[ name = name ] OPTIONAL ).
+        IF current_section IS INITIAL.
+          APPEND VALUE #( name = name ) TO current_page->sections REFERENCE INTO current_section.
+          SORT current_page->sections BY name.
+          current_section->title = read_words( line ).
+        ENDIF.
         current_text = REF #( current_section->text ).
-        current_section->title = read_words( line ).
 
       WHEN 'subsection'.
         token = source->next_token( ).
         name = token-value.
         line = token-line.
-        APPEND VALUE #( name = name ) TO current_section->subsections REFERENCE INTO subsection.
-        subsection->title = read_words( line ).
+        token = source->next_token( ).
+        subsection = REF #( current_section->subsections[ name = name ] OPTIONAL ).
+        IF subsection IS INITIAL.
+          APPEND VALUE #( name = name ) TO current_section->subsections REFERENCE INTO subsection.
+          subsection->title = read_words( line ).
+        ENDIF.
         current_text = REF #( subsection->text ).
     ENDCASE.
 

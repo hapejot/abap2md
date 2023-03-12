@@ -136,12 +136,12 @@ CLASS zcl_abap2md_tag_def_parser IMPLEMENTATION.
     DATA: rules TYPE stringtab,
           token TYPE zabap2md_token,
           lines TYPE stringtab.
-    rules = VALUE #(    ( `^ *([0-9]{1,4}[.-][0-9]{1,2}[.-][0-9]{1,4})` )  " #1
-                        ( `@([a-zA-Z0-9]+) *` )                     " #2
-                        ( `([.,;:/])` )                              " #3
-                        ( `([^ .,;:/]+) *` )                         " #4
-                        ( `^( *)$` )                                " #5
-
+    rules = VALUE #(    ( |^(```[\{][.][a-zA-Z]+)| )                        " F
+                        ( `^ *([0-9]{1,4}[.-][0-9]{1,2}[.-][0-9]{1,4})` )   " A
+                        ( `@([a-zA-Z0-9]+) *` )                             " B
+                        ( `([.,;:/])` )                                     " C
+                        ( `([^ .,;:/]+) *` )                                " D
+                        ( `^( *)$` )                                        " E
                         ).
     IF m_regex IS INITIAL.
       CONCATENATE LINES OF rules INTO DATA(pattern) SEPARATED BY '|'.
@@ -171,31 +171,34 @@ CLASS zcl_abap2md_tag_def_parser IMPLEMENTATION.
     ENDIF.
     IF m_pushed IS INITIAL AND m_matcher IS BOUND.
       IF m_matcher->find_next( ).
-        DATA(s1) = m_matcher->get_submatch( 1 ).
-        DATA(s2) = m_matcher->get_submatch( 2 ).
-        DATA(s3) = m_matcher->get_submatch( 3 ).
-        DATA(s4) = m_matcher->get_submatch( 4 ).
-        DATA(s5) = m_matcher->get_submatch( 5 ).
+        DATA(s_a) = m_matcher->get_submatch( 2 ).
+        DATA(s_b) = m_matcher->get_submatch( 3 ).
+        DATA(s_c) = m_matcher->get_submatch( 4 ).
+        DATA(s_d) = m_matcher->get_submatch( 5 ).
+        DATA(s_e) = m_matcher->get_submatch( 6 ).
+        DATA(s_f) = m_matcher->get_submatch( 1 ).
         DATA(line) = m_matcher->get_line( ).
-        IF s2 IS NOT INITIAL.
-          r_result = VALUE #(  type = 'CMD' value = s2 line = line ).
-        ELSEIF s3 IS NOT INITIAL.
-          r_result = VALUE #( type = 'SEP' value = s3 line = line ).
-        ELSEIF s4 IS NOT INITIAL.
-          r_result = VALUE #( type = 'WORD' value = s4 line = line ).
-        ELSEIF s1 IS NOT INITIAL.
+        IF s_b IS NOT INITIAL.
+          r_result = VALUE #(  type = 'CMD' value = s_b line = line ).
+        ELSEIF s_c IS NOT INITIAL.
+          r_result = VALUE #( type = 'SEP' value = s_c line = line ).
+        ELSEIF s_d IS NOT INITIAL.
+          r_result = VALUE #( type = 'WORD' value = s_d line = line ).
+        ELSEIF s_a IS NOT INITIAL.
           DATA year(4) TYPE c.
           DATA month(2) TYPE c.
           DATA day(2) TYPE c.
-          SPLIT s1 AT '.' INTO day month year.
+          SPLIT s_a AT '.' INTO day month year.
           IF year IS INITIAL.
-            SPLIT s1 AT '-' INTO year month day.
+            SPLIT s_a AT '-' INTO year month day.
           ENDIF.
           r_result = VALUE #(   type = 'DATE'
                                 value = |{ year }{
                                             month ALIGN = RIGHT PAD = '0' WIDTH = 2 }{
                                             day ALIGN = RIGHT PAD = '0' WIDTH = 2 }|
                                 line = line ).
+        ELSEIF s_f IS NOT INITIAL.
+          r_result = VALUE #( type = 'WORD' value = s_f line = line ).
         ELSE. " the only alternative with an empty result so we cannot check for it.
           r_result = VALUE #( type = 'PARSEP' line = line ).
         ENDIF.

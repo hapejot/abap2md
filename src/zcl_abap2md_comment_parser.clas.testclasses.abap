@@ -24,7 +24,7 @@ CLASS ltcl_parse_comment_multi IMPLEMENTATION.
                     ( `* This page contains the subsections @ref subsection1 and @ref subsection2.` )
                     ( `* For more info see page @ref page2.` )
                     ( `*@subsection subsection1 The first subsection` )
-                    ( `* Text.` )
+                    ( `* Text.with dots` )
                     ( `* @subsection subsection2 The second subsection` )
                     ( `* More text.` )
                     ( `*/` )
@@ -57,7 +57,7 @@ CLASS ltcl_parse_comment_multi IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'LINE'  line =  7 value = 'This page contains the subsections @ref subsection1 and @ref subsection2.'  ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'LINE'  line =  8 value = 'For more info see page @ref page2.'  ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'LINE'  line =  9 value = '@subsection subsection1 The first subsection'  ) act = cut->next_token( ) ).
-    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'LINE'  line = 10 value = 'Text.'  ) act = cut->next_token( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'LINE'  line = 10 value = 'Text.with dots'  ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'LINE'  line = 11 value = '@subsection subsection2 The second subsection'  ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'LINE'  line = 12 value = 'More text.'  ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'END'   line = 13 ) act = cut->next_token( ) ).

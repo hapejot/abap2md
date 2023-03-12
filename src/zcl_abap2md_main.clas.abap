@@ -21,7 +21,8 @@ CLASS zcl_abap2md_main DEFINITION
 
   PUBLIC SECTION.
     TYPES:
-             obj_name TYPE tadir-obj_name.
+      obj_name     TYPE tadir-obj_name,
+      tt_obj_names TYPE STANDARD TABLE OF tadir-obj_name WITH EMPTY KEY.
     METHODS generate_single
       IMPORTING
         !iv_name       TYPE obj_name
@@ -39,6 +40,11 @@ CLASS zcl_abap2md_main DEFINITION
     METHODS build_structure
       RETURNING
         VALUE(r_result) TYPE zabap2md_doc_structure.
+    METHODS resolve_names
+      IMPORTING
+        i_names          TYPE zabap2md_object_names
+      RETURNING
+        VALUE(obj_names) TYPE tt_obj_names.
   PROTECTED SECTION.
   PRIVATE SECTION.
     DATA mt_names TYPE STANDARD TABLE OF obj_name WITH DEFAULT KEY.
@@ -118,7 +124,6 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
     ENDLOOP.
 
     TRY.
-        build_structure( ).
         main_gen->generate_markdown( CHANGING ct_text = r_text ).
 *        LOOP AT infos INTO lo_info.
 *          APPEND INITIAL LINE TO r_text.
@@ -157,12 +162,38 @@ CLASS zcl_abap2md_main IMPLEMENTATION.
 * first try is as a class name.
 * @param iv_name name of the object
 */
-    r_result = zcl_abap2md_class_info=>try_read( CONV #( to_upper( iv_name ) ) ).
+    DATA(name) = to_upper( iv_name ).
+    r_result = zcl_abap2md_class_info=>try_read( CONV #( name ) ).
     IF r_result IS INITIAL.
-      r_result = zcl_abap2md_program_info=>try_read( to_upper( iv_name ) ).
+      r_result = zcl_abap2md_program_info=>try_read( name ).
     ENDIF.
     IF r_result IS INITIAL.
-      r_result = zcl_abap2md_function_info=>try_read( to_upper( iv_name ) ).
+      r_result = zcl_abap2md_function_info=>try_read( name ).
+    ENDIF.
+    IF r_result IS INITIAL.
+      r_result = zcl_abap2md_table_info=>try_read( CONV #( name ) ).
     ENDIF.
   ENDMETHOD.
+
+  METHOD resolve_names.
+
+    DATA name_range TYPE RANGE OF tadir-obj_name.
+    " first select possible candidates from TADIR
+
+    name_range = VALUE #( FOR <x> IN i_names ( sign = 'I' option = 'CP' low = to_upper( <x> ) ) ).
+    SELECT obj_name
+          FROM tadir
+          WHERE obj_name IN @name_range
+          AND pgmid = 'R3TR'
+          AND object IN ( 'CLAS', 'PROG', 'INTF', 'TABL' )
+          APPENDING TABLE @obj_names.
+
+    " next try the same with TFDIR
+    SELECT funcname
+          FROM tfdir
+          WHERE funcname IN @name_range
+          APPENDING TABLE @obj_names.
+
+  ENDMETHOD.
+
 ENDCLASS.
