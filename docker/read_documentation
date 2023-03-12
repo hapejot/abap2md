@@ -38,5 +38,5 @@ if len(names) > 0:
             fd.write(f'{x}\n')
 
 
-    system('pandoc -s /work/doc.md --lua-filter=diagram-generator.lua -o /work/doc.pdf')
-    system('pandoc -s /work/doc.md --lua-filter=diagram-generator.lua -o /work/doc.docx')
+    system('pandoc --log=./pdf.log  -s /work/doc.md --lua-filter=diagram-generator.lua -o /work/doc.pdf')
+    system('pandoc --log=./docx.log -s /work/doc.md --lua-filter=diagram-generator.lua -o /work/doc.docx')

@@ -111,19 +111,13 @@ function Meta(meta)
   )
 end
 
-
 -- Call plantuml.jar with some parameters (cf. PlantUML help):
 local function plantuml(puml, filetype)
---  return pandoc.pipe(
---    java_path,
---    {"-jar", plantuml_path, "-t" .. filetype, "-pipe", "-charset", "UTF8"},
---    puml
---  )
-    return pandoc.pipe(
-        "plantuml", 
-        { "-t" .. filetype, "-pipe", "-charset", "UTF8"},
-        puml
-    )
+  return pandoc.pipe(
+    java_path,
+    {"-jar", plantuml_path, "-t" .. filetype, "-pipe", "-charset", "UTF8"},
+    puml
+  )
 end
 
 -- Call dot (GraphViz) in order to generate the image
@@ -167,7 +161,7 @@ local function convert_with_inkscape(filetype)
 
   if filetype == 'png' then
     local png_arg = isv1 and '--export-type=png' or '--export-png="%s"'
-    output_args = png_arg .. '--export-dpi=300'
+    output_args = png_arg .. ' --export-dpi=300'
   elseif filetype == 'svg' then
     output_args = isv1 and '--export-type=svg --export-plain-svg' or '--export-plain-svg="%s"'
   else
@@ -326,6 +320,12 @@ function CodeBlock(block)
     py2image = py2image,
     asymptote = asymptote,
   }
+  io.stderr:write("**** code block ")
+  for i,x in ipairs(block.classes) do
+      io.stderr:write("/")
+      io.stderr:write(x)
+  end
+  io.stderr:write('\n')
 
   -- Check if a converter exists for this block. If not, return the block
   -- unchanged.
@@ -359,37 +359,53 @@ function CodeBlock(block)
 
   -- If the user defines a caption, read it as Markdown.
   local caption = block.attributes.caption
-    and pandoc.read(block.attributes.caption).blocks[1].content
-    or {}
+    and pandoc.read(block.attributes.caption).blocks
+    or pandoc.Blocks{}
+  local alt = pandoc.utils.blocks_to_inlines(caption)
 
-  -- A non-empty caption means that this image is a figure. We have to
-  -- set the image title to "fig:" for pandoc to treat it as such.
-  local title = #caption > 0 and "fig:" or ""
+  if PANDOC_VERSION < 3 then
+    -- A non-empty caption means that this image is a figure. We have to
+    -- set the image title to "fig:" for pandoc to treat it as such.
+    local title = #caption > 0 and "fig:" or ""
 
-  -- Transfer identifier and other relevant attributes from the code
-  -- block to the image. The `name` is kept as an attribute.
-  -- This allows a figure block starting with:
-  --
-  --     ```{#fig:example .plantuml caption="Image created by **PlantUML**."}
-  --
-  -- to be referenced as @fig:example outside of the figure when used
-  -- with `pandoc-crossref`.
-  local img_attr = {
-    id = block.identifier,
-    name = block.attributes.name,
-    width = block.attributes.width,
-    height = block.attributes.height
-  }
+    -- Transfer identifier and other relevant attributes from the code
+    -- block to the image. The `name` is kept as an attribute.
+    -- This allows a figure block starting with:
+    --
+    --     ```{#fig:example .plantuml caption="Image created by **PlantUML**."}
+    --
+    -- to be referenced as @fig:example outside of the figure when used
+    -- with `pandoc-crossref`.
+    local img_attr = {
+      id = block.identifier,
+      name = block.attributes.name,
+      width = block.attributes.width,
+      height = block.attributes.height
+    }
 
-  -- Create a new image for the document's structure. Attach the user's
-  -- caption. Also use a hack (fig:) to enforce pandoc to create a
-  -- figure i.e. attach a caption to the image.
-  local img_obj = pandoc.Image(caption, fname, title, img_attr)
+    -- Create a new image for the document's structure. Attach the user's
+    -- caption. Also use a hack (fig:) to enforce pandoc to create a
+    -- figure i.e. attach a caption to the image.
+    local img_obj = pandoc.Image(alt, fname, title, img_attr)
 
-  -- Finally, put the image inside an empty paragraph. By returning the
-  -- resulting paragraph object, the source code block gets replaced by
-  -- the image:
-  return pandoc.Para{ img_obj }
+    -- Finally, put the image inside an empty paragraph. By returning the
+    -- resulting paragraph object, the source code block gets replaced by
+    -- the image:
+    return pandoc.Para{ img_obj }
+  else
+    local fig_attr = {
+      id = block.identifier,
+      name = block.attributes.name,
+    }
+    local img_attr = {
+      width = block.attributes.width,
+      height = block.attributes.height,
+    }
+    local img_obj = pandoc.Image(alt, fname, "", img_attr)
+
+    -- Create a figure that contains just this image.
+    return pandoc.Figure(pandoc.Plain{img_obj}, caption, fig_attr)
+  end
 end
 
 -- Normally, pandoc will run the function in the built-in order Inlines ->

@@ -1,4 +1,5 @@
 # dopy rfc library to local dir in order for docker to be able to access it
 cp -r ../client/Linux/nwrfcsdk .
-docker build -t hapejot/abap2md:4 -t hapejot/abap2md:latest .
+#docker build -t hapejot/abap2md:4 -t hapejot/abap2md:latest .
+docker build -t hapejot/abap2md:4 hapejot/abap2md:latest .
 rm -r nwrfcsdk

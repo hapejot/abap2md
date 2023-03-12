@@ -6,4 +6,7 @@ sapnwrfc.ini
 bin
 *.docx
 doc.idx
+doc.md
 *.pdf
+cfg
+tmp

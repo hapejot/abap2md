@@ -1,4 +1,4 @@
-FROM python:3-bullseye
+FROM python:3.9
 
 WORKDIR /app
 
@@ -18,6 +18,6 @@ RUN apt update && apt-get -y install pandoc clang texlive graphviz plantuml libr
 COPY read_documentation read_documentation
 COPY diagram-generator.lua diagram-generator.lua
 VOLUME ["/config", "/work"]
-RUN ln -s /config/sapnwrfc.ini . && ls -l
+RUN ln -s /config/sapnwrfc.ini . && cp /usr/share/plantuml/plantuml.jar . && ls -l
 
 ENTRYPOINT ["./read_documentation"]
