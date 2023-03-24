@@ -190,6 +190,8 @@ CLASS zcl_abap2md_md_table IMPLEMENTATION.
 
     DATA line TYPE string.
     DATA sep TYPE string.
+
+    APPEND INITIAL LINE TO r_result.
     IF pipe_separator = abap_false.
       APPEND dashed_line( `-` ) TO r_result.
     ENDIF.
@@ -204,6 +206,7 @@ CLASS zcl_abap2md_md_table IMPLEMENTATION.
     IF pipe_separator = abap_false.
       APPEND dashed_line( `-` ) TO r_result.
     ENDIF.
+    APPEND INITIAL LINE TO r_result.
   ENDMETHOD.
 
 
