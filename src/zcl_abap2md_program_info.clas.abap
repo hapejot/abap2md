@@ -51,13 +51,96 @@ ENDCLASS.
 
 
 
-CLASS zcl_abap2md_program_info IMPLEMENTATION.
+CLASS ZCL_ABAP2MD_PROGRAM_INFO IMPLEMENTATION.
 
 
   METHOD constructor.
 
     me->ms_tadir = is_tadir.
 
+  ENDMETHOD.
+
+
+  METHOD extract_word.
+**/
+* extract the initial word of the text separated by space and remove this from the first line.
+* leading and traling spaces will be removed from the resulting first line.
+*
+* @param text contains the text lines.
+* @return the first word of the first line.
+*/
+    WHILE text IS NOT INITIAL.
+      IF text[ 1 ] IS INITIAL.
+        DELETE text INDEX 1.
+      ENDIF.
+      IF text[ 1 ] CA space.
+        DATA(idx) = sy-fdpos.
+        r_result = substring( val = text[ 1 ] len = idx ).
+        text[ 1 ] = condense( substring( val = text[ 1 ] off = idx ) ).
+        EXIT.
+      ELSE.
+        r_result = text[ 1 ].
+        DELETE text INDEX 1.
+        EXIT.
+      ENDIF.
+    ENDWHILE.
+
+  ENDMETHOD.
+
+
+  METHOD find_param.
+
+    rr_param  = REF #( mr_info->params[ name = i_name ] OPTIONAL ).
+    IF rr_param IS INITIAL.
+      APPEND VALUE #( name  = i_name ) TO mr_info->params REFERENCE INTO rr_param.
+    ENDIF.
+
+
+  ENDMETHOD.
+
+
+  METHOD get_field_title.
+
+    CALL FUNCTION 'DDIF_FIELDLABEL_GET'
+      EXPORTING
+        tabname   = i_table_name    " Name of the table (of the type) for which information is req
+        fieldname = i_field_name    " Use Parameter LFIELDNAME Instead
+      IMPORTING
+        label     = title
+      EXCEPTIONS
+        OTHERS    = 0.  " if there is no title there is no title.
+
+
+  ENDMETHOD.
+
+
+  METHOD parse_docu.
+    DATA: lv_tag_value TYPE string.
+
+    DATA(tokens) = CAST zif_abap2md_parser( NEW zcl_abap2md_tag_def_parser( i_text = i_text ) ).
+    DO.
+      DATA(chunk) = tokens->next_chunk( ).
+      IF chunk IS INITIAL.
+        EXIT.
+      ENDIF.
+
+      CASE to_upper( chunk[ 1 ] ).
+
+*     Returning docu
+
+*     Parameter docu
+        WHEN '@PARAM'.
+          chunk = tokens->next_chunk( ).
+          lv_tag_value = to_upper( extract_word( CHANGING text = chunk ) ).
+          DATA(lr_param) = find_param( lv_tag_value ).
+          APPEND LINES OF chunk TO lr_param->text.
+        WHEN '@@C'.
+          EXIT.
+
+        WHEN OTHERS.
+          APPEND LINES OF chunk TO mr_info->text.
+      ENDCASE.
+    ENDDO.
   ENDMETHOD.
 
 
@@ -79,6 +162,27 @@ CLASS zcl_abap2md_program_info IMPLEMENTATION.
       ro_result = NEW zcl_abap2md_program_info( ls_tadir ).
     ENDIF.
 
+  ENDMETHOD.
+
+
+  METHOD user_name.
+    DATA: ls_address TYPE bapiaddr3,
+          lt_ret     TYPE STANDARD TABLE OF bapiret2,
+          ls_company TYPE bapiuscomp.
+
+    CALL FUNCTION 'BAPI_USER_GET_DETAIL'
+      EXPORTING
+        username = iv_uname
+      IMPORTING
+        address  = ls_address
+        company  = ls_company
+      TABLES
+        return   = lt_ret.
+
+    rv_name = |{ ls_address-firstname } { ls_address-lastname }|.
+    IF ls_company-company IS NOT INITIAL.
+      rv_name = |{ rv_name } ({ ls_company-company })|.
+    ENDIF.
   ENDMETHOD.
 
 
@@ -140,33 +244,6 @@ CLASS zcl_abap2md_program_info IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD get_field_title.
-
-    CALL FUNCTION 'DDIF_FIELDLABEL_GET'
-      EXPORTING
-        tabname   = i_table_name    " Name of the table (of the type) for which information is req
-        fieldname = i_field_name    " Use Parameter LFIELDNAME Instead
-      IMPORTING
-        label     = title
-      EXCEPTIONS
-        OTHERS    = 0.  " if there is no title there is no title.
-
-
-  ENDMETHOD.
-
-
-
-
-  METHOD find_param.
-
-    rr_param  = REF #( mr_info->params[ name = i_name ] OPTIONAL ).
-    IF rr_param IS INITIAL.
-      APPEND VALUE #( name  = i_name ) TO mr_info->params REFERENCE INTO rr_param.
-    ENDIF.
-
-
-  ENDMETHOD.
-
 
   METHOD zif_abap2md_info~generate_markdown.
     TYPES: BEGIN OF row,
@@ -182,7 +259,7 @@ CLASS zcl_abap2md_program_info IMPLEMENTATION.
                     ( when = `last changed` date = |{ ms_hd-udat DATE = USER }|  user = user_name( ms_hd-unam ) )
      ).
 
-    DATA(lo_markdown) = CAST zif_abap2md_text_generator( NEW zcl_abap2md_markdown( ) ).
+    DATA(lo_markdown) = CAST zif_abap2md_text_generator( NEW zcl_abap2md_markdown( VALUE #( ) ) ).
 
     lo_markdown->heading( iv_level = 1 iv_text = ms_tadir-obj_name
                 )->text( ms_text-text
@@ -202,84 +279,6 @@ CLASS zcl_abap2md_program_info IMPLEMENTATION.
     READ TEXTPOOL ms_tadir-obj_name LANGUAGE sy-langu INTO texttab.
 
     READ REPORT ms_tadir-obj_name INTO m_src.
-
-  ENDMETHOD.
-
-
-  METHOD user_name.
-    DATA: ls_address TYPE bapiaddr3,
-          lt_ret     TYPE STANDARD TABLE OF bapiret2,
-          ls_company TYPE bapiuscomp.
-
-    CALL FUNCTION 'BAPI_USER_GET_DETAIL'
-      EXPORTING
-        username = iv_uname
-      IMPORTING
-        address  = ls_address
-        company  = ls_company
-      TABLES
-        return   = lt_ret.
-
-    rv_name = |{ ls_address-firstname } { ls_address-lastname }|.
-    IF ls_company-company IS NOT INITIAL.
-      rv_name = |{ rv_name } ({ ls_company-company })|.
-    ENDIF.
-  ENDMETHOD.
-
-
-  METHOD parse_docu.
-    DATA: lv_tag_value TYPE string.
-
-    DATA(tokens) = CAST zif_abap2md_parser( NEW zcl_abap2md_tag_def_parser( i_text = i_text ) ).
-    DO.
-      DATA(chunk) = tokens->next_chunk( ).
-      IF chunk IS INITIAL.
-        EXIT.
-      ENDIF.
-
-      CASE to_upper( chunk[ 1 ] ).
-
-*     Returning docu
-
-*     Parameter docu
-        WHEN '@PARAM'.
-          chunk = tokens->next_chunk( ).
-          lv_tag_value = to_upper( extract_word( CHANGING text = chunk ) ).
-          DATA(lr_param) = find_param( lv_tag_value ).
-          APPEND LINES OF chunk TO lr_param->text.
-        WHEN '@@C'.
-          EXIT.
-
-        WHEN OTHERS.
-          APPEND LINES OF chunk TO mr_info->text.
-      ENDCASE.
-    ENDDO.
-  ENDMETHOD.
-
-
-  METHOD extract_word.
-**/
-* extract the initial word of the text separated by space and remove this from the first line.
-* leading and traling spaces will be removed from the resulting first line.
-*
-* @param text contains the text lines.
-* @return the first word of the first line.
-*/
-    WHILE text IS NOT INITIAL.
-      IF text[ 1 ] IS INITIAL.
-        DELETE text INDEX 1.
-      ENDIF.
-      IF text[ 1 ] CA space.
-        DATA(idx) = sy-fdpos.
-        r_result = substring( val = text[ 1 ] len = idx ).
-        text[ 1 ] = condense( substring( val = text[ 1 ] off = idx ) ).
-        EXIT.
-      ELSE.
-        r_result = text[ 1 ].
-        DELETE text INDEX 1.
-        EXIT.
-      ENDIF.
-    ENDWHILE.
 
   ENDMETHOD.
 ENDCLASS.

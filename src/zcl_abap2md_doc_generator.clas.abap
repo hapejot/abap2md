@@ -47,7 +47,7 @@ CLASS zcl_abap2md_doc_generator DEFINITION
         c_chunk         TYPE rswsourcet
       RETURNING
         VALUE(r_result) TYPE string.
-    METHODS gen_param_def_list
+    METHODS generate_param_def_list
       IMPORTING
         i_gen    TYPE REF TO zif_abap2md_text_generator
         i_params TYPE zabap2md_params.
@@ -62,7 +62,7 @@ CLASS zcl_abap2md_doc_generator DEFINITION
       IMPORTING
                 i_enum          TYPE seoexpose
       RETURNING VALUE(r_result) TYPE string.
-    METHODS gen_class
+    METHODS generate_class
       IMPORTING
         i_gen TYPE REF TO zif_abap2md_text_generator
         i_cls TYPE zabap2md_class_info.
@@ -129,14 +129,6 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
-  METHOD static_name.
-
-    IF iv_static = abap_true.
-      rv_name = 'static'.
-    ENDIF.
-
-  ENDMETHOD.
-
 
   METHOD exposure_name.
     IF m_cache-exposure IS INITIAL.
@@ -174,6 +166,63 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD generate_changes.
+
+    i_gen->heading( iv_level = 2 iv_text = |Changes| ).
+    DATA(changes) = i_changes.
+    SORT changes BY date DESCENDING.
+    LOOP AT changes REFERENCE INTO DATA(change).
+      i_gen->definition(  iv_text = change->text
+                          iv_def  = |{ change->date DATE = USER }|    ).
+    ENDLOOP.
+
+
+  ENDMETHOD.
+
+
+  METHOD generate_class.
+    DATA code TYPE stringtab.
+
+    i_gen->heading( iv_level    =   1
+                    iv_text     =   |{ 'Class'(004) } { i_cls-name }|
+     )->text(                       i_cls-text ).
+
+    write_dependencies(   i_cls = i_cls
+                          i_gen = i_gen ).
+
+    LOOP AT i_cls-methods INTO DATA(method).
+      IF    method-title IS NOT INITIAL
+            OR method-changes IS NOT INITIAL
+            OR method-text IS NOT INITIAL.
+        generate_method(         i_method = method
+                            i_gen    = i_gen ).
+      ENDIF.
+    ENDLOOP.
+
+
+  ENDMETHOD.
+
+
+  METHOD generate_function.
+
+    i_gen->heading( iv_level = 1
+        iv_text = |{ 'Function'(003) } {
+                              explained_name( i_name  = i_fun-name
+                                              i_title = i_fun-title ) }|
+     )->text( i_fun-text ).
+    generate_param_def_list(
+        i_gen    = i_gen
+        i_params = i_fun-params
+    ).
+
+    IF i_fun-changes IS NOT INITIAL.
+      generate_changes( i_gen     = i_gen
+                        i_changes = i_fun-changes ).
+    ENDIF.
+
+  ENDMETHOD.
+
+
   METHOD generate_markdown.
     DATA: page       TYPE page,
           section    TYPE section,
@@ -181,7 +230,7 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
           gen        TYPE REF TO zif_abap2md_text_generator.
 
 
-    gen ?= NEW zcl_abap2md_markdown( ).
+    gen ?= NEW zcl_abap2md_markdown( mx_options-markdown ).
 
     SORT doc-pages BY name.
     LOOP AT doc-pages INTO page.
@@ -218,75 +267,13 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
     ENDLOOP.
 
     LOOP AT doc-classes INTO DATA(cls).
-      gen_class(      i_gen = gen
+      generate_class(      i_gen = gen
                       i_cls = cls ).
     ENDLOOP.
 
     APPEND LINES OF gen->result( ) TO ct_text.
   ENDMETHOD.
 
-  METHOD generate_report.
-
-    i_gen->heading( iv_level = 1
-                    iv_text = |{ 'Report'(002) } {
-                                  explained_name( i_name = i_prg-name
-                                                  i_title = i_prg-title ) }|
-    )->text( i_prg-text ).
-    gen_param_def_list(     i_gen = i_gen
-                            i_params = i_prg-params ).
-
-    IF i_prg-changes IS NOT INITIAL.
-      generate_changes( i_gen     = i_gen
-                        i_changes = i_prg-changes ).
-    ENDIF.
-
-  ENDMETHOD.
-
-
-
-  METHOD generate_function.
-
-    i_gen->heading( iv_level = 1
-        iv_text = |{ 'Function'(003) } {
-                              explained_name( i_name  = i_fun-name
-                                              i_title = i_fun-title ) }|
-     )->text( i_fun-text ).
-    gen_param_def_list(
-        i_gen    = i_gen
-        i_params = i_fun-params
-    ).
-
-    IF i_fun-changes IS NOT INITIAL.
-      generate_changes( i_gen     = i_gen
-                        i_changes = i_fun-changes ).
-    ENDIF.
-
-  ENDMETHOD.
-
-
-
-
-  METHOD gen_class.
-    DATA code TYPE stringtab.
-
-    i_gen->heading( iv_level    =   1
-                    iv_text     =   |{ 'Class'(004) } { i_cls-name }|
-     )->text(                       i_cls-text ).
-
-    write_dependencies(   i_cls = i_cls
-                          i_gen = i_gen ).
-
-    LOOP AT i_cls-methods INTO DATA(method).
-      IF    method-title IS NOT INITIAL
-            OR method-changes IS NOT INITIAL
-            OR method-text IS NOT INITIAL.
-        generate_method(         i_method = method
-                            i_gen    = i_gen ).
-      ENDIF.
-    ENDLOOP.
-
-
-  ENDMETHOD.
 
   METHOD generate_method.
 
@@ -326,7 +313,7 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
     i_gen->code( code ).
     i_gen->new_paragraph( ).
     i_gen->text( i_method-text ).
-    gen_param_def_list(     i_gen    = i_gen
+    generate_param_def_list(     i_gen    = i_gen
                             i_params = i_method-params    ).
     IF i_method-returns-text IS NOT INITIAL.
       i_gen->definition(    iv_def  = 'Returns'
@@ -341,56 +328,41 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD generate_changes.
 
-    i_gen->heading( iv_level = 2 iv_text = |Changes| ).
-    DATA(changes) = i_changes.
-    SORT changes BY date DESCENDING.
-    LOOP AT changes REFERENCE INTO DATA(change).
-      i_gen->definition(  iv_text = change->text
-                          iv_def  = |{ change->date DATE = USER }|    ).
-    ENDLOOP.
+  METHOD generate_report.
 
+    i_gen->heading( iv_level = 1
+                    iv_text = |{ 'Report'(002) } {
+                                  explained_name( i_name = i_prg-name
+                                                  i_title = i_prg-title ) }|
+    )->text( i_prg-text ).
+    generate_param_def_list(     i_gen = i_gen
+                            i_params = i_prg-params ).
+
+    IF i_prg-changes IS NOT INITIAL.
+      generate_changes( i_gen     = i_gen
+                        i_changes = i_prg-changes ).
+    ENDIF.
 
   ENDMETHOD.
 
 
-
-
-
-  METHOD write_dependencies.
-
-    DATA: dep           LIKE LINE OF i_cls-dependencies,
-          title_written TYPE abap_bool.
-    CLEAR title_written.
-    LOOP AT i_cls-dependencies INTO dep WHERE kind = 'FU-SYMBOL'.
-      IF title_written IS INITIAL.
-        i_gen->heading( iv_level = 2 iv_text = 'Referenced Function Modules' ).
-        title_written = abap_true.
-      ENDIF.
-      i_gen->definition(    iv_text = |{ dep-title }|
-                                  iv_def  = dep-name ).
-    ENDLOOP.
-
-    CLEAR title_written.
-    LOOP AT i_cls-dependencies INTO dep WHERE kind = 'TY-CLASS'.
-      CHECK dep-name(1) = 'Z'.
-      IF title_written IS INITIAL.
-        i_gen->heading( iv_level = 2 iv_text = 'Referenced Custom Classes' ).
-        title_written = abap_true.
-      ENDIF.
-      i_gen->definition(    iv_text = |{ dep-title }|
-                                  iv_def  = dep-name ).
-    ENDLOOP.
+  METHOD generate_table.
+    i_gen->heading( iv_level = 1
+                    iv_text = |{ 'Table' } {
+                                  explained_name( i_name = i_tab->name
+                                                  i_title = i_tab->title ) }|
+    )->text( i_tab->text
+    )->table(   it_table = i_tab->fields
+                it_fields = VALUE #( ( name = 'NAME' title = 'Fieldname' )
+                                     ( name = 'TEXT' title = 'Description' ) ) ).
 
 
 
   ENDMETHOD.
 
 
-
-
-  METHOD gen_param_def_list.
+  METHOD generate_param_def_list.
 
     LOOP AT i_params INTO DATA(param).
       DATA(txt) = VALUE stringtab( ).
@@ -411,18 +383,10 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD zif_abap2md_doc_generator~add_text.
-**/
-* Reads a complete source file and interprets the comment sections.
-*
-* this method concentrates on the content in the file that might got into
-* the general document sections. This will ignore specific information about
-* the documented object but sort the pages and sections into the right place.
-*/
-
-    parse_v1( i_code ).
-
+  METHOD options.
+    mx_options = ix_options.
   ENDMETHOD.
+
 
   METHOD parse_v1.
 
@@ -483,6 +447,68 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD static_name.
+
+    IF iv_static = abap_true.
+      rv_name = 'static'.
+    ENDIF.
+
+  ENDMETHOD.
+
+
+  METHOD write_dependencies.
+
+    DATA: dep           LIKE LINE OF i_cls-dependencies,
+          dependencies  LIKE i_cls-dependencies,
+          title_written TYPE abap_bool.
+    CLEAR title_written.
+
+
+    dependencies = VALUE #( FOR <row> IN i_cls-dependencies WHERE ( kind = 'FU-SYMBOL' ) ( <row> ) ).
+    IF dependencies IS NOT INITIAL.
+      i_gen->heading( iv_level = 2 iv_text = 'Referenced Function Modules' ).
+      i_gen->table(
+          it_table  = dependencies
+          it_fields = VALUE #( ( name = 'NAME' title = 'Name' ) ( name = 'TITLE' title = 'Description' ) )
+      ).
+    ENDIF.
+
+    dependencies = VALUE #( FOR <row> IN i_cls-dependencies WHERE ( kind = 'TY-CLASS' AND name > 'Z' ) ( <row> ) ).
+    IF dependencies IS NOT INITIAL.
+      i_gen->heading( iv_level = 2 iv_text = 'Referenced Custom Classes'
+      )->table(
+        it_table  = dependencies
+        it_fields = VALUE #( ( name = 'NAME' title = 'Name' ) ( name = 'TITLE' title = 'Description' ) )
+    ).
+    ENDIF.
+*
+*    LOOP AT i_cls-dependencies INTO dep WHERE kind = 'TY-CLASS'.
+*      CHECK dep-name(1) = 'Z'.
+*      IF title_written IS INITIAL.
+*        i_gen->heading( iv_level = 2 iv_text = 'Referenced Custom Classes' ).
+*        title_written = abap_true.
+*      ENDIF.
+*      i_gen->definition(    iv_text = |{ dep-title }|
+*                                  iv_def  = dep-name ).
+*    ENDLOOP.
+
+
+
+  ENDMETHOD.
+
+
+  METHOD zif_abap2md_doc_generator~add_text.
+**/
+* Reads a complete source file and interprets the comment sections.
+*
+* this method concentrates on the content in the file that might got into
+* the general document sections. This will ignore specific information about
+* the documented object but sort the pages and sections into the right place.
+*/
+
+    parse_v1( i_code ).
+
+  ENDMETHOD.
 
 
   METHOD zif_abap2md_doc_generator~doc.
@@ -494,19 +520,4 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
     mr_main_text = i_text.
     mr_current_text = mr_main_text.
   ENDMETHOD.
-
-  METHOD options.
-    mx_options = ix_options.
-  ENDMETHOD.
-
-
-  METHOD generate_table.
-    i_gen->heading( iv_level = 1
-                    iv_text = |{ 'Table' } {
-                                  explained_name( i_name = i_tab->name
-                                                  i_title = i_tab->title ) }|
-    )->text( i_tab->text ).
-
-  ENDMETHOD.
-
 ENDCLASS.

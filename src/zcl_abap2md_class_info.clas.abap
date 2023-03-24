@@ -71,7 +71,7 @@ ENDCLASS.
 
 
 
-CLASS zcl_abap2md_class_info IMPLEMENTATION.
+CLASS ZCL_ABAP2MD_CLASS_INFO IMPLEMENTATION.
 
 
   METHOD build_class_info.
@@ -557,54 +557,6 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 
   METHOD zif_abap2md_info~generate_markdown.
     ASSERT 1 = 2. " check if this is called somewhere
-    DATA(lo_markdown) = CAST zif_abap2md_text_generator( NEW zcl_abap2md_markdown( ) ).
-
-    lo_markdown->heading( iv_level = 1 iv_text = mr_info->name
-                )->text( mr_info->title
-                )->new_paragraph(
-                )->text( mr_info->text ).
-
-    lo_markdown->heading( iv_level = 2 iv_text = 'Referenced Function Modules' ).
-
-    LOOP AT mr_info->methods INTO DATA(method).
-
-      lo_markdown->heading( iv_level = 2 iv_text = method-name
-                  )->new_paragraph(
-                  )->text( method-title
-                  )->new_paragraph(
-                  )->text( method-text
-                  )->new_paragraph(
-*                  )->code( write_out_params( method )
-                  ).
-
-*      LOOP AT method-parameter_infos INTO DATA(par).
-*        IF par-description IS NOT INITIAL.
-*          lo_markdown->definition(
-*              iv_text = par-description
-*              iv_def  = par-parameter_name
-*          ).
-*        ENDIF.
-*      ENDLOOP.
-*
-*      IF method-return_info-description IS NOT INITIAL.
-*        lo_markdown->definition(
-*            iv_text = method-return_info-description
-*            iv_def  = method-return_info-parameter_name
-*        ).
-*      ENDIF.
-*
-*      LOOP AT method-exception_infos INTO DATA(exc).
-*        IF exc-description IS NOT INITIAL.
-*          lo_markdown->definition(
-*              iv_text = exc-description
-*              iv_def  = exc-exception_name
-*          ).
-*        ENDIF.
-*      ENDLOOP.
-
-    ENDLOOP.
-
-    APPEND LINES OF lo_markdown->result( ) TO ct_text.
 
   ENDMETHOD.
 

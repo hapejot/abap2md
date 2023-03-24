@@ -62,17 +62,22 @@ ENDCLASS.
 
 
 
-CLASS zcl_abap2md_adt_reader IMPLEMENTATION.
-
-  METHOD parse_xml.
+CLASS ZCL_ABAP2MD_ADT_READER IMPLEMENTATION.
 
 
-    DATA(doc) = create_xml_parser( cdata ).
-    IF doc IS BOUND.
-      parse_result_set( doc->get_first_child( ) ).
-    ENDIF.
-
+  METHOD adt_name.
+    TRY.
+        r_name =
+            i_doc->get_attributes(
+                )->get_named_item(
+                      name      = 'name'
+                      namespace = 'adtcore'
+                )->get_value( ).
+      CATCH cx_sy_ref_is_initial.
+        " ignore this.
+    ENDTRY.
   ENDMETHOD.
+
 
   METHOD create_xml_parser.
 
@@ -90,64 +95,6 @@ CLASS zcl_abap2md_adt_reader IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD read_interface_source.
-    DATA req TYPE sadt_rest_request.
-    DATA res TYPE sadt_rest_response.
-    DATA txt TYPE STANDARD TABLE OF tline.
-    DATA(line_len) = 132.
-
-    req-request_line-method = 'GET'.
-    req-request_line-uri = |/sap/bc/adt/oo/interfaces/{ interface_name }/objectstructure|.
-    req-request_line-version = 'HTTP/1.1'.
-    req-header_fields = VALUE #(
-    ( name = 'Accept'             value = 'application/vnd.sap.adt.elementinfo+xml;q=0.9, text/plain;q=0.1' )
-    ( name = 'User-Agent'          value = 'Eclipse/4.22.0.v20211124-1800 (win32; x86_64; Java 17.0.1) ADT/3.22.1 (devedition)' )
-      ).
-    CALL FUNCTION 'SADT_REST_RFC_ENDPOINT'
-      EXPORTING
-        request  = req    " Rest Request
-      IMPORTING
-        response = res.    " Rest Request
-
-
-    DATA(s) = cl_bcs_convert=>xstring_to_string(
-        iv_xstr   = res-message_body
-        iv_cp     = '4110' " UTF-8
-    ).
-
-    parse_xml( s ).
-
-  ENDMETHOD.
-
-  METHOD read_interface_source2.
-    DATA req TYPE sadt_rest_request.
-    DATA res TYPE sadt_rest_response.
-    DATA txt TYPE STANDARD TABLE OF tline.
-    DATA(line_len) = 132.
-
-    req-request_line-method = 'GET'.
-    req-request_line-uri = |/sap/bc/adt/oo/interfaces/{ interface_name }/source/main|.
-    req-request_line-version = 'HTTP/1.1'.
-    req-header_fields = VALUE #(
-    ( name = 'Accept'             value = 'text/plain' )
-    ( name = 'User-Agent'          value = 'Eclipse/4.22.0.v20211124-1800 (win32; x86_64; Java 17.0.1) ADT/3.22.1 (devedition)' )
-      ).
-    CALL FUNCTION 'SADT_REST_RFC_ENDPOINT'
-      EXPORTING
-        request  = req    " Rest Request
-      IMPORTING
-        response = res.    " Rest Request
-
-
-    DATA(s) = cl_bcs_convert=>xstring_to_string(
-        iv_xstr   = res-message_body
-        iv_cp     = '4110' " UTF-8
-    ).
-
-    SPLIT s AT |\n| INTO TABLE src.
-
-  ENDMETHOD.
-
 
   METHOD extract_children.
     DATA(children) = i_node->get_children( ).
@@ -158,18 +105,6 @@ CLASS zcl_abap2md_adt_reader IMPLEMENTATION.
     ENDDO.
   ENDMETHOD.
 
-
-  METHOD parse_element.
-
-    LOOP AT extract_children( i_node ) INTO DATA(child).
-      DATA(name) = |{ child->get_namespace( ) }:{ child->get_name( ) }|.
-      CASE name.
-        WHEN 'atom:link'.
-          l = extract_link_info( child ).
-      ENDCASE.
-    ENDLOOP.
-
-  ENDMETHOD.
 
   METHOD extract_link_info.
 
@@ -207,6 +142,24 @@ CLASS zcl_abap2md_adt_reader IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD if_oo_adt_classrun~main.
+    read_interface_source2( 'ZIF_ABAP2MD_INFO' ).
+    read_interface_source( 'ZIF_ABAP2MD_INFO' ).
+    out->write( log ).
+  ENDMETHOD.
+
+
+  METHOD parse_element.
+
+    LOOP AT extract_children( i_node ) INTO DATA(child).
+      DATA(name) = |{ child->get_namespace( ) }:{ child->get_name( ) }|.
+      CASE name.
+        WHEN 'atom:link'.
+          l = extract_link_info( child ).
+      ENDCASE.
+    ENDLOOP.
+
+  ENDMETHOD.
 
 
   METHOD parse_result_set.
@@ -225,31 +178,81 @@ CLASS zcl_abap2md_adt_reader IMPLEMENTATION.
             ELSE.
               EXIT.
             ENDIF.
-            idx -= 1.
+            idx = idx - 1.
           ENDWHILE.
       ENDCASE.
     ENDLOOP.
 
   ENDMETHOD.
 
-  METHOD adt_name.
-    TRY.
-        r_name =
-            i_doc->get_attributes(
-                )->get_named_item(
-                      name      = 'name'
-                      namespace = 'adtcore'
-                )->get_value( ).
-      CATCH cx_sy_ref_is_initial.
-        " ignore this.
-    ENDTRY.
+
+  METHOD parse_xml.
+
+
+    DATA(doc) = create_xml_parser( cdata ).
+    IF doc IS BOUND.
+      parse_result_set( doc->get_first_child( ) ).
+    ENDIF.
+
   ENDMETHOD.
 
 
-  METHOD if_oo_adt_classrun~main.
-    read_interface_source2( 'ZIF_ABAP2MD_INFO' ).
-    read_interface_source( 'ZIF_ABAP2MD_INFO' ).
-    out->write( log ).
+  METHOD read_interface_source.
+    DATA req TYPE sadt_rest_request.
+    DATA res TYPE sadt_rest_response.
+    DATA txt TYPE STANDARD TABLE OF tline.
+    DATA(line_len) = 132.
+
+    req-request_line-method = 'GET'.
+    req-request_line-uri = |/sap/bc/adt/oo/interfaces/{ interface_name }/objectstructure|.
+    req-request_line-version = 'HTTP/1.1'.
+    req-header_fields = VALUE #(
+    ( name = 'Accept'             value = 'application/vnd.sap.adt.elementinfo+xml;q=0.9, text/plain;q=0.1' )
+    ( name = 'User-Agent'          value = 'Eclipse/4.22.0.v20211124-1800 (win32; x86_64; Java 17.0.1) ADT/3.22.1 (devedition)' )
+      ).
+    CALL FUNCTION 'SADT_REST_RFC_ENDPOINT'
+      EXPORTING
+        request  = req    " Rest Request
+      IMPORTING
+        response = res.    " Rest Request
+
+
+    DATA(s) = cl_bcs_convert=>xstring_to_string(
+        iv_xstr   = res-message_body
+        iv_cp     = '4110' " UTF-8
+    ).
+
+    parse_xml( s ).
+
   ENDMETHOD.
 
+
+  METHOD read_interface_source2.
+    DATA req TYPE sadt_rest_request.
+    DATA res TYPE sadt_rest_response.
+    DATA txt TYPE STANDARD TABLE OF tline.
+    DATA(line_len) = 132.
+
+    req-request_line-method = 'GET'.
+    req-request_line-uri = |/sap/bc/adt/oo/interfaces/{ interface_name }/source/main|.
+    req-request_line-version = 'HTTP/1.1'.
+    req-header_fields = VALUE #(
+    ( name = 'Accept'             value = 'text/plain' )
+    ( name = 'User-Agent'          value = 'Eclipse/4.22.0.v20211124-1800 (win32; x86_64; Java 17.0.1) ADT/3.22.1 (devedition)' )
+      ).
+    CALL FUNCTION 'SADT_REST_RFC_ENDPOINT'
+      EXPORTING
+        request  = req    " Rest Request
+      IMPORTING
+        response = res.    " Rest Request
+
+
+    DATA(s) = cl_bcs_convert=>xstring_to_string(
+        iv_xstr   = res-message_body
+        iv_cp     = '4110' " UTF-8
+    ).
+
+    SPLIT s AT |\n| INTO TABLE src.
+
+  ENDMETHOD.
 ENDCLASS.

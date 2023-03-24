@@ -57,6 +57,7 @@ ENDCLASS.
 
 CLASS zcl_abap2md_table_info IMPLEMENTATION.
 
+
   METHOD constructor.
 
     me->m_state = iv_state.
@@ -72,43 +73,6 @@ CLASS zcl_abap2md_table_info IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD zif_abap2md_info~build_doc_structure.
-    DATA(doc) = i_gen->doc( ).
-    DATA text TYPE zabap2md_text.
-    DATA: pline       TYPE STANDARD TABLE OF tline,
-          l_doc_id    TYPE dokhl-id VALUE 'TB',
-          l_object    TYPE dokhl-object,
-          symbols     TYPE STANDARD TABLE OF itcst,
-          replacement TYPE char80.
-    APPEND VALUE zabap2md_table_info( name = m_hd-tabname ) TO  doc->tables REFERENCE INTO DATA(cur_table).
-
-    l_object = m_name.
-    CALL FUNCTION 'DOCU_GET'
-      EXPORTING
-        id     = l_doc_id
-        langu  = sy-langu
-        object = l_object
-      TABLES
-        line   = pline
-      EXCEPTIONS
-        OTHERS = 5.
-    CALL FUNCTION 'SDU_DOCU_REPLACE'
-      TABLES
-        lines  = pline
-      EXCEPTIONS
-        OTHERS = 3.
-
-    IF sy-subrc = 0 AND pline IS NOT INITIAL.
-      cur_table->text = sapscript_to_markdown( pline ).
-    ENDIF.
-
-    LOOP AT m_fields REFERENCE INTO DATA(fld).
-      text = VALUE #( (  |{ fld->ddtext } { fld->scrtext_l }| ) ).
-      APPEND VALUE #( name = fld->fieldname
-                      data_type = |{ fld->datatype } { fld->domname } { fld->rollname }|
-                      text = text  ) TO cur_table->fields.
-    ENDLOOP.
-  ENDMETHOD.
 
   METHOD sapscript_to_markdown.
 **/
@@ -193,15 +157,6 @@ CLASS zcl_abap2md_table_info IMPLEMENTATION.
   ENDMETHOD.
 
 
-
-  METHOD zif_abap2md_info~generate_markdown.
-
-  ENDMETHOD.
-
-  METHOD zif_abap2md_info~read_main.
-
-  ENDMETHOD.
-
   METHOD try_read.
     DATA: l_state       TYPE ddgotstate,
           l_hd          TYPE dd02v,
@@ -252,4 +207,57 @@ CLASS zcl_abap2md_table_info IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
+
+  METHOD zif_abap2md_info~build_doc_structure.
+    DATA(doc) = i_gen->doc( ).
+    DATA text TYPE zabap2md_text.
+    DATA: pline       TYPE STANDARD TABLE OF tline,
+          l_doc_id    TYPE dokhl-id VALUE 'TB',
+          l_object    TYPE dokhl-object,
+          symbols     TYPE STANDARD TABLE OF itcst,
+          replacement TYPE char80.
+    APPEND VALUE zabap2md_table_info( name = m_hd-tabname ) TO  doc->tables REFERENCE INTO DATA(cur_table).
+    cur_table->title = m_hd-ddtext.
+    l_object = m_name.
+    CALL FUNCTION 'DOCU_GET'
+      EXPORTING
+        id     = l_doc_id
+        langu  = sy-langu
+        object = l_object
+      TABLES
+        line   = pline
+      EXCEPTIONS
+        OTHERS = 5.
+    CALL FUNCTION 'SDU_DOCU_REPLACE'
+      TABLES
+        lines  = pline
+      EXCEPTIONS
+        OTHERS = 3.
+
+    IF sy-subrc = 0 AND pline IS NOT INITIAL.
+      cur_table->text = sapscript_to_markdown( pline ).
+    ENDIF.
+
+    LOOP AT m_fields REFERENCE INTO DATA(fld).
+      CLEAR text.
+      IF fld->ddtext IS NOT INITIAL.
+        APPEND fld->ddtext TO text.
+      ELSEIF fld->scrtext_l IS NOT INITIAL.
+        APPEND fld->scrtext_l TO text.
+      ENDIF.
+      APPEND VALUE #( name = fld->fieldname
+                      data_type = |{ fld->datatype } { fld->domname } { fld->rollname }|
+                      text = text  ) TO cur_table->fields.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD zif_abap2md_info~generate_markdown.
+
+  ENDMETHOD.
+
+
+  METHOD zif_abap2md_info~read_main.
+
+  ENDMETHOD.
 ENDCLASS.

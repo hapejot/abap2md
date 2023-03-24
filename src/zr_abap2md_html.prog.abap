@@ -39,7 +39,7 @@ START-OF-SELECTION.
   LOOP AT elements INTO DATA(element) WHERE docset = p_objset.
     APPEND element-name TO names.
   ENDLOOP.
-
+  options-markdown-use_pipe_tables = abap_true.
   CALL FUNCTION 'Z_ABAP2MD_GENERATE_MULTI'
     EXPORTING
       it_names   = names

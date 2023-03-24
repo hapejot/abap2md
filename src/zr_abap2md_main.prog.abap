@@ -57,51 +57,81 @@
 */
 REPORT zr_abap2md_main.
 DATA:
-  rc        TYPE i,
-  doc       TYPE stringtab,
-  path      TYPE zcl_abap2md_local_file=>t_dir,
-  files     TYPE filetable,
-  obj_names TYPE STANDARD TABLE OF zcl_abap2md_main=>obj_name,
-  obj_name  TYPE zcl_abap2md_main=>obj_name,
-  options   TYPE zabap2md_options.
-SELECT-OPTIONS:
-    s_objs FOR obj_name.
-PARAMETERS: p_path  TYPE zcl_abap2md_local_file=>t_dir DEFAULT 'abap-doc.md'.
+  rc          TYPE i,
+  doc         TYPE stringtab,
+  json_string TYPE string,
+  path        TYPE zcl_abap2md_local_file=>t_dir,
+  files       TYPE filetable,
+  obj_names   TYPE STANDARD TABLE OF zcl_abap2md_main=>obj_name,
+  obj_name    TYPE zcl_abap2md_main=>obj_name,
+  last_objset TYPE seoclsname,
+  values      TYPE vrm_values,
+  elements    TYPE STANDARD TABLE OF zabap2md_docelem,
+  field_name  TYPE fieldname VALUE 'P_OBJSET',
+  options     TYPE zabap2md_options.
+
+PARAMETERS:
+  p_objset TYPE zabap2md_docelem-docset AS LISTBOX VISIBLE LENGTH 35,
+  p_json   TYPE abap_bool AS CHECKBOX.
+
+PARAMETERS:
+  p_pipe TYPE abap_bool AS CHECKBOX,
+  p_path TYPE zcl_abap2md_local_file=>t_dir.
+
 
 AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_path.
   cl_gui_frontend_services=>file_open_dialog(
+    EXPORTING
+      default_filename = p_path
     CHANGING
-      file_table              = files
-      rc                      = rc
+      file_table       = files
+      rc               = rc
   ).
   IF lines( files ) > 0.
     p_path = files[ 1 ].
   ENDIF.
 
-START-OF-SELECTION.
+AT SELECTION-SCREEN OUTPUT.
+  SELECT * FROM zabap2md_docelem
+        INTO TABLE @elements.
+  CLEAR values.
+  LOOP AT elements INTO DATA(x) GROUP BY x-docset.
+    APPEND VALUE #( key = x-docset text = x-docset ) TO values.
+  ENDLOOP.
 
-  " first select possible candidates from TADIR
-  SELECT obj_name
-        FROM tadir
-        WHERE obj_name IN @s_objs
-        AND pgmid = 'R3TR'
-        AND object IN ( 'CLAS', 'PROG' )
-        INTO TABLE @obj_names.
-
-  " next try the same with TFDIR
-  SELECT funcname
-        FROM tfdir
-        WHERE funcname IN @s_objs
-        APPENDING TABLE @obj_names.
-
-
-  CALL FUNCTION 'Z_ABAP2MD_GENERATE_MULTI'
+  CALL FUNCTION 'VRM_SET_VALUES'
     EXPORTING
-      it_names   = obj_names
-      ix_options = options
-    IMPORTING
-      et_doc     = doc.
+      id     = 'P_OBJSET'
+      values = values.
 
+  IF p_objset IS NOT INITIAL AND last_objset <> p_objset.
+    last_objset = p_objset.
+    p_path = |{ p_objset }.md|.
+  ENDIF.
+
+
+
+START-OF-SELECTION.
+  options-markdown-use_pipe_tables = p_pipe.
+  IF p_json IS INITIAL.
+    CALL FUNCTION 'Z_ABAP2MD_GENERATE_MULTI'
+      EXPORTING
+        it_names   = obj_names
+        iv_obj_set = p_objset
+        ix_options = options
+      IMPORTING
+        et_doc     = doc.
+  ELSE.
+    CALL FUNCTION 'Z_ABAP2MD_GENERATE_DOC_STRUCT'
+      EXPORTING
+        it_names   = obj_names
+        iv_obj_set = p_objset
+      IMPORTING
+*       es_struct  =     " Documentation Structure
+        ev_doc     = json_string.    " JSON representation of the doc structure
+
+    doc = VALUE #( ( json_string ) ).
+  ENDIF.
   DATA(file) = NEW zcl_abap2md_local_file( ).
   file->add_text( doc ).
   file->save( i_path = p_path ).

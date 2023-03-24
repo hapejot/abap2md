@@ -5,7 +5,12 @@ CLASS zcl_abap2md_markdown DEFINITION
 
   PUBLIC SECTION.
     INTERFACES zif_abap2md_text_generator.
+    METHODS constructor
+      IMPORTING
+        options TYPE zabap2md_markdown_options.
+  PROTECTED SECTION.
   PRIVATE SECTION.
+    DATA options TYPE zabap2md_markdown_options.
     DATA: mt_text TYPE rswsourcet.
     METHODS generate_table
       IMPORTING
@@ -18,125 +23,13 @@ ENDCLASS.
 
 
 CLASS zcl_abap2md_markdown IMPLEMENTATION.
-  METHOD zif_abap2md_text_generator~generate.
+
+  METHOD constructor.
+
+    me->options = options.
 
   ENDMETHOD.
 
-  METHOD zif_abap2md_text_generator~heading.
-**/
-* reporting the heading in form of
-*      # heading 1
-*      ## heading 2
-*/
-
-    DATA: txt TYPE string.
-
-    zif_abap2md_text_generator~new_paragraph( ).
-    CASE iv_level.
-      WHEN 1.
-        txt = CONV string( iv_text ).
-        APPEND |# {  txt }| TO mt_text.
-        " ATEXT variant dropped in favour of the ATX variant
-        " APPEND repeat( val = '=' occ = strlen( txt ) ) TO mt_text.
-      WHEN 2.
-        txt = CONV string( iv_text ).
-        APPEND |## {  txt }| TO mt_text.
-        " APPEND repeat( val = '-' occ = strlen( txt ) ) TO mt_text.
-    ENDCASE.
-    " skip line after heading
-    APPEND INITIAL LINE TO mt_text.
-    ro_gen = me.
-  ENDMETHOD.
-
-  METHOD zif_abap2md_text_generator~text.
-
-    FIELD-SYMBOLS: <lt_text> TYPE STANDARD TABLE,
-                   <lv_text> TYPE any.
-    DATA(lo_type) = cl_abap_typedescr=>describe_by_data( iv_text ).
-    CASE lo_type->kind.
-      WHEN cl_abap_typedescr=>kind_table.
-        " see if the table is a table with one column or multiple columns:
-        DATA(tab) = CAST cl_abap_tabledescr( cl_abap_typedescr=>describe_by_data( iv_text ) ).
-        DATA(struct) = tab->get_table_line_type( ).
-        IF struct->kind = cl_abap_typedescr=>kind_struct.
-          APPEND LINES OF generate_table( io_type = CAST cl_abap_structdescr( struct ) it_tab = iv_text ) TO mt_text.
-        ELSE.
-          ASSIGN iv_text TO <lt_text>.
-          LOOP AT <lt_text> ASSIGNING <lv_text>.
-            APPEND CONV string( <lv_text> ) TO mt_text.
-          ENDLOOP.
-        ENDIF.
-      WHEN OTHERS.
-        APPEND CONV string( iv_text ) TO mt_text.
-    ENDCASE.
-
-    ro_gen = me.
-
-  ENDMETHOD.
-
-  METHOD zif_abap2md_text_generator~result.
-
-    r_result = mt_text.
-
-  ENDMETHOD.
-
-  METHOD zif_abap2md_text_generator~code.
-    FIELD-SYMBOLS: <lt_text> TYPE STANDARD TABLE,
-                   <lv_text> TYPE any.
-
-    APPEND INITIAL LINE TO mt_text.
-    DATA(lo_type) = cl_abap_typedescr=>describe_by_data( iv_text ).
-    CASE lo_type->kind.
-      WHEN cl_abap_typedescr=>kind_table.
-        ASSIGN iv_text TO <lt_text>.
-        LOOP AT <lt_text> ASSIGNING <lv_text>.
-          APPEND |    { <lv_text> }| TO mt_text.
-        ENDLOOP.
-      WHEN OTHERS.
-        APPEND |    { iv_text }|   TO mt_text.
-    ENDCASE.
-
-    ro_gen = me.
-
-  ENDMETHOD.
-
-  METHOD zif_abap2md_text_generator~definition.
-
-    FIELD-SYMBOLS: <lt_text> TYPE STANDARD TABLE,
-                   <lv_text> TYPE any.
-
-* empty line
-    APPEND INITIAL LINE TO mt_text.
-
-* Definition term
-    APPEND |**{ iv_def }**|  TO mt_text.
-
-* Definition text
-    DATA(lo_type) = cl_abap_typedescr=>describe_by_data( iv_text ).
-    DATA(lv_first_out) = ':'.
-    CASE lo_type->kind.
-      WHEN cl_abap_typedescr=>kind_table.
-        ASSIGN iv_text TO <lt_text>.
-        LOOP AT <lt_text> ASSIGNING <lv_text>.
-          APPEND |{ lv_first_out WIDTH = 4 }{ <lv_text> }| TO mt_text.
-          CLEAR lv_first_out.
-        ENDLOOP.
-      WHEN OTHERS.
-        APPEND |:   { iv_text }|   TO mt_text.
-    ENDCASE.
-
-    ro_gen = me.
-
-  ENDMETHOD.
-
-  METHOD zif_abap2md_text_generator~new_paragraph.
-    " skip one line only if there is already text.
-    IF mt_text IS NOT INITIAL AND mt_text[ lines( mt_text ) ] IS NOT INITIAL.
-      APPEND INITIAL LINE TO mt_text.
-    ENDIF.
-
-    ro_gen = me.
-  ENDMETHOD.
 
   METHOD generate_table.
     DATA: col_width TYPE i,
@@ -192,5 +85,145 @@ CLASS zcl_abap2md_markdown IMPLEMENTATION.
       ENDLOOP.
     ENDLOOP.
     APPEND INITIAL LINE TO r_out_tab.
+  ENDMETHOD.
+
+
+  METHOD zif_abap2md_text_generator~code.
+    FIELD-SYMBOLS: <lt_text> TYPE STANDARD TABLE,
+                   <lv_text> TYPE any.
+
+    APPEND INITIAL LINE TO mt_text.
+    DATA(lo_type) = cl_abap_typedescr=>describe_by_data( iv_text ).
+    CASE lo_type->kind.
+      WHEN cl_abap_typedescr=>kind_table.
+        ASSIGN iv_text TO <lt_text>.
+        LOOP AT <lt_text> ASSIGNING <lv_text>.
+          APPEND |    { <lv_text> }| TO mt_text.
+        ENDLOOP.
+      WHEN OTHERS.
+        APPEND |    { iv_text }|   TO mt_text.
+    ENDCASE.
+
+    ro_gen = me.
+
+  ENDMETHOD.
+
+
+  METHOD zif_abap2md_text_generator~definition.
+
+    FIELD-SYMBOLS: <lt_text> TYPE STANDARD TABLE,
+                   <lv_text> TYPE any.
+
+* empty line
+    APPEND INITIAL LINE TO mt_text.
+
+* Definition term
+    APPEND |**{ iv_def }**|  TO mt_text.
+
+* Definition text
+    DATA(lo_type) = cl_abap_typedescr=>describe_by_data( iv_text ).
+    DATA(lv_first_out) = ':'.
+    CASE lo_type->kind.
+      WHEN cl_abap_typedescr=>kind_table.
+        ASSIGN iv_text TO <lt_text>.
+        LOOP AT <lt_text> ASSIGNING <lv_text>.
+          APPEND |{ lv_first_out WIDTH = 4 }{ <lv_text> }| TO mt_text.
+          CLEAR lv_first_out.
+        ENDLOOP.
+      WHEN OTHERS.
+        APPEND |:   { iv_text }|   TO mt_text.
+    ENDCASE.
+
+    ro_gen = me.
+
+  ENDMETHOD.
+
+
+  METHOD zif_abap2md_text_generator~generate.
+
+  ENDMETHOD.
+
+
+  METHOD zif_abap2md_text_generator~heading.
+**/
+* reporting the heading in form of
+*      # heading 1
+*      ## heading 2
+*/
+
+    DATA: txt TYPE string.
+
+    zif_abap2md_text_generator~new_paragraph( ).
+    CASE iv_level.
+      WHEN 1.
+        txt = CONV string( iv_text ).
+        APPEND |# {  txt }| TO mt_text.
+        " ATEXT variant dropped in favour of the ATX variant
+        " APPEND repeat( val = '=' occ = strlen( txt ) ) TO mt_text.
+      WHEN 2.
+        txt = CONV string( iv_text ).
+        APPEND |## {  txt }| TO mt_text.
+        " APPEND repeat( val = '-' occ = strlen( txt ) ) TO mt_text.
+    ENDCASE.
+    " skip line after heading
+    APPEND INITIAL LINE TO mt_text.
+    ro_gen = me.
+  ENDMETHOD.
+
+
+  METHOD zif_abap2md_text_generator~new_paragraph.
+    " skip one line only if there is already text.
+    IF mt_text IS NOT INITIAL AND mt_text[ lines( mt_text ) ] IS NOT INITIAL.
+      APPEND INITIAL LINE TO mt_text.
+    ENDIF.
+
+    ro_gen = me.
+  ENDMETHOD.
+
+
+  METHOD zif_abap2md_text_generator~result.
+
+    r_result = mt_text.
+
+  ENDMETHOD.
+
+
+  METHOD zif_abap2md_text_generator~table.
+
+    DATA(tab) = NEW zcl_abap2md_md_table( ).
+    tab->load( it_table ).
+    tab->set_fields( it_fields ).
+    IF options-use_pipe_tables = abap_true.
+      tab->use_pipe_separator( ).
+    ENDIF.
+    APPEND LINES OF tab->get_markdown( ) TO mt_text.
+
+  ENDMETHOD.
+
+
+  METHOD zif_abap2md_text_generator~text.
+
+    FIELD-SYMBOLS: <lt_text> TYPE STANDARD TABLE,
+                   <lv_text> TYPE any.
+    DATA(lo_type) = cl_abap_typedescr=>describe_by_data( iv_text ).
+    CASE lo_type->kind.
+      WHEN cl_abap_typedescr=>kind_table.
+        " see if the table is a table with one column or multiple columns:
+        DATA(tab) = CAST cl_abap_tabledescr( cl_abap_typedescr=>describe_by_data( iv_text ) ).
+        DATA(struct) = tab->get_table_line_type( ).
+        IF struct->kind = cl_abap_typedescr=>kind_struct.
+          APPEND LINES OF generate_table( io_type = CAST cl_abap_structdescr( struct ) it_tab = iv_text ) TO mt_text.
+        ELSE.
+          ASSIGN iv_text TO <lt_text>.
+          LOOP AT <lt_text> ASSIGNING <lv_text>.
+            APPEND CONV string( <lv_text> ) TO mt_text.
+          ENDLOOP.
+        ENDIF.
+      WHEN OTHERS.
+        APPEND CONV string( iv_text ) TO mt_text.
+    ENDCASE.
+
+    ro_gen = me.
+
   ENDMETHOD.
 ENDCLASS.

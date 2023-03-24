@@ -56,10 +56,76 @@ ENDCLASS.
 
 
 
-CLASS zcl_abap2md_function_info IMPLEMENTATION.
+CLASS ZCL_ABAP2MD_FUNCTION_INFO IMPLEMENTATION.
+
+
   METHOD constructor.
 
     me->ms_tfdir = is_tfdir.
+
+  ENDMETHOD.
+
+
+  METHOD extract_word.
+**/
+* extract the initial word of the text separated by space and remove this from the first line.
+* leading and traling spaces will be removed from the resulting first line.
+*
+* @param text contains the text lines.
+* @return the first word of the first line.
+*/
+    IF text IS NOT INITIAL.
+      IF text[ 1 ] CA space.
+        DATA(idx) = sy-fdpos.
+        r_result = substring( val = text[ 1 ] len = idx ).
+        text[ 1 ] = condense( substring( val = text[ 1 ] off = idx ) ).
+      ELSE.
+        r_result = text[ 1 ].
+        CLEAR text[ 1 ].
+      ENDIF.
+    ENDIF.
+  ENDMETHOD.
+
+
+  METHOD find_param.
+
+    rr_param  = REF #( mr_info->params[ name = iv_tag_value ] OPTIONAL ).
+    IF rr_param IS INITIAL.
+      APPEND VALUE #( name  = iv_tag_value ) TO mr_info->params REFERENCE INTO rr_param.
+    ENDIF.
+
+
+  ENDMETHOD.
+
+
+  METHOD parse_docu.
+    DATA: lv_tag_value TYPE string.
+
+    DATA(tokens) = CAST zif_abap2md_parser( NEW zcl_abap2md_tag_def_parser( NEW zcl_abap2md_comment_parser( m_src ) ) ).
+    DO.
+      DATA(chunk) = tokens->next_chunk( ).
+      IF chunk IS INITIAL.
+        EXIT.
+      ENDIF.
+
+      CASE to_upper( chunk[ 1 ] ).
+
+*     Returning docu
+
+*     Parameter docu
+        WHEN '@PARAM'.
+          chunk = tokens->next_chunk( ).
+          lv_tag_value = to_upper( extract_word( CHANGING text = chunk ) ).
+          DATA(lr_param) = find_param( lv_tag_value ).
+          APPEND LINES OF chunk TO lr_param->text.
+        WHEN '@@C'.
+          EXIT.
+
+        WHEN OTHERS.
+          APPEND LINES OF chunk TO mr_info->text.
+      ENDCASE.
+
+    ENDDO.
 
   ENDMETHOD.
 
@@ -75,6 +141,7 @@ CLASS zcl_abap2md_function_info IMPLEMENTATION.
     ENDIF.
 
   ENDMETHOD.
+
 
   METHOD user_name.
     DATA: ls_address TYPE bapiaddr3,
@@ -95,6 +162,7 @@ CLASS zcl_abap2md_function_info IMPLEMENTATION.
       rv_name = |{ rv_name } ({ ls_company-company })|.
     ENDIF.
   ENDMETHOD.
+
 
   METHOD zif_abap2md_info~build_doc_structure.
     DATA: funcname                TYPE rs38l-name,
@@ -163,14 +231,6 @@ CLASS zcl_abap2md_function_info IMPLEMENTATION.
     mr_info->name = ms_tfdir-funcname.
     mr_info->title = short_text.
 
-*    LOOP AT export_parameter INTO DATA(epar).
-*    ENDLOOP.
-*    LOOP AT import_parameter INTO DATA(ipar).
-*    ENDLOOP.
-*    LOOP AT changing_parameter INTO DATA(cpar).
-*    ENDLOOP.
-*    LOOP AT tables_parameter INTO DATA(tpar).
-*    ENDLOOP.
     LOOP AT dokumentation INTO DATA(dok).
       DATA(par) = find_param( dok-parameter ).
       par->title = dok-stext.
@@ -211,6 +271,7 @@ CLASS zcl_abap2md_function_info IMPLEMENTATION.
 
   ENDMETHOD.
 
+
   METHOD zif_abap2md_info~generate_markdown.
     TYPES: BEGIN OF row,
              when TYPE string,
@@ -224,7 +285,7 @@ CLASS zcl_abap2md_function_info IMPLEMENTATION.
                     ( when = `last changed` date = |{ ms_hd-udat DATE = USER }|  user = user_name( ms_hd-unam ) )
      ).
 
-    DATA(lo_markdown) = CAST zif_abap2md_text_generator( NEW zcl_abap2md_markdown( ) ).
+    DATA(lo_markdown) = CAST zif_abap2md_text_generator( NEW zcl_abap2md_markdown( VALUE #( ) ) ).
 
     lo_markdown->heading( iv_level = 1 iv_text = 'ms_tadir-obj_name'
                 )->text( ms_text-text
@@ -236,70 +297,8 @@ CLASS zcl_abap2md_function_info IMPLEMENTATION.
     APPEND LINES OF lo_markdown->result( ) TO ct_text.
   ENDMETHOD.
 
+
   METHOD zif_abap2md_info~read_main.
 
   ENDMETHOD.
-  METHOD extract_word.
-**/
-* extract the initial word of the text separated by space and remove this from the first line.
-* leading and traling spaces will be removed from the resulting first line.
-*
-* @param text contains the text lines.
-* @return the first word of the first line.
-*/
-    IF text IS NOT INITIAL.
-      IF text[ 1 ] CA space.
-        DATA(idx) = sy-fdpos.
-        r_result = substring( val = text[ 1 ] len = idx ).
-        text[ 1 ] = condense( substring( val = text[ 1 ] off = idx ) ).
-      ELSE.
-        r_result = text[ 1 ].
-        CLEAR text[ 1 ].
-      ENDIF.
-    ENDIF.
-  ENDMETHOD.
-
-  METHOD parse_docu.
-    DATA: lv_tag_value TYPE string.
-
-    DATA(tokens) = CAST zif_abap2md_parser( NEW zcl_abap2md_tag_def_parser( NEW zcl_abap2md_comment_parser( m_src ) ) ).
-    DO.
-      DATA(chunk) = tokens->next_chunk( ).
-      IF chunk IS INITIAL.
-        EXIT.
-      ENDIF.
-
-      CASE to_upper( chunk[ 1 ] ).
-
-*     Returning docu
-
-*     Parameter docu
-        WHEN '@PARAM'.
-          chunk = tokens->next_chunk( ).
-          lv_tag_value = to_upper( extract_word( CHANGING text = chunk ) ).
-          DATA(lr_param) = find_param( lv_tag_value ).
-          APPEND LINES OF chunk TO lr_param->text.
-        WHEN '@@C'.
-          EXIT.
-
-        WHEN OTHERS.
-          APPEND LINES OF chunk TO mr_info->text.
-      ENDCASE.
-
-    ENDDO.
-
-  ENDMETHOD.
-
-  METHOD find_param.
-
-    rr_param  = REF #( mr_info->params[ name = iv_tag_value ] OPTIONAL ).
-    IF rr_param IS INITIAL.
-      APPEND VALUE #( name  = iv_tag_value ) TO mr_info->params REFERENCE INTO rr_param.
-    ENDIF.
-
-
-  ENDMETHOD.
-
-
-
 ENDCLASS.
