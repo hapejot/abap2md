@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_MSAG" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <T100A>
+    <ARBGB>ZABAP2MD</ARBGB>
+    <MASTERLANG>E</MASTERLANG>
+    <STEXT>Messages for ABAP to Markdown</STEXT>
+   </T100A>
+   <T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP2MD</ARBGB>
+     <MSGNR>000</MSGNR>
+     <TEXT>UI Message</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP2MD</ARBGB>
+     <MSGNR>001</MSGNR>
+     <TEXT>Please choose a valid object set.</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP2MD</ARBGB>
+     <MSGNR>100</MSGNR>
+     <TEXT>Function Success</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP2MD</ARBGB>
+     <MSGNR>200</MSGNR>
+     <TEXT>Function Info</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP2MD</ARBGB>
+     <MSGNR>300</MSGNR>
+     <TEXT>Function Warning</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP2MD</ARBGB>
+     <MSGNR>400</MSGNR>
+     <TEXT>Error caused by user</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP2MD</ARBGB>
+     <MSGNR>401</MSGNR>
+     <TEXT>File could not be saved!</TEXT>
+    </T100>
+    <T100>
+     <SPRSL>E</SPRSL>
+     <ARBGB>ZABAP2MD</ARBGB>
+     <MSGNR>500</MSGNR>
+     <TEXT>Error caused by system</TEXT>
+    </T100>
+   </T100>
+  </asx:values>
+ </asx:abap>
+</abapGit>

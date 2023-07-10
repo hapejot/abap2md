@@ -12,20 +12,32 @@
    </PROGDIR>
    <TPOOL>
     <item>
+     <ID>I</ID>
+     <KEY>001</KEY>
+     <ENTRY>Show HTML</ENTRY>
+     <LENGTH>19</LENGTH>
+    </item>
+    <item>
+     <ID>I</ID>
+     <KEY>002</KEY>
+     <ENTRY>Download Markdown</ENTRY>
+     <LENGTH>27</LENGTH>
+    </item>
+    <item>
      <ID>R</ID>
      <ENTRY>Running ABAP2MD document generator</ENTRY>
      <LENGTH>34</LENGTH>
     </item>
     <item>
      <ID>S</ID>
-     <KEY>P_PATH</KEY>
-     <ENTRY>Path to store output</ENTRY>
-     <LENGTH>28</LENGTH>
+     <KEY>P_OBJSET</KEY>
+     <ENTRY>Documentation Object Set</ENTRY>
+     <LENGTH>32</LENGTH>
     </item>
     <item>
      <ID>S</ID>
-     <KEY>S_OBJS</KEY>
-     <ENTRY>Dev. Objects to read</ENTRY>
+     <KEY>P_PATH</KEY>
+     <ENTRY>Path to store output</ENTRY>
      <LENGTH>28</LENGTH>
     </item>
    </TPOOL>

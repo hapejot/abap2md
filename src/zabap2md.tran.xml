@@ -4,7 +4,7 @@
   <asx:values>
    <TSTC>
     <TCODE>ZABAP2MD</TCODE>
-    <PGMNA>ZR_ABAP2MD_HTML</PGMNA>
+    <PGMNA>ZR_ABAP2MD_MAIN</PGMNA>
     <DYPNO>1000</DYPNO>
     <CINFO>gA==</CINFO>
    </TSTC>

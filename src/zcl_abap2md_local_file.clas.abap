@@ -51,7 +51,12 @@ CLASS zcl_abap2md_local_file IMPLEMENTATION.
         filename     = i_path
         filetype     = 'BIN'
       CHANGING
-        data_tab     = m_solix.
+        data_tab     = m_solix
+      EXCEPTIONS
+        OTHERS       = 1.
+    IF sy-subrc > 0.
+      MESSAGE i400(zabap2md) WITH i_path.
+    ENDIF.
   ENDMETHOD.
 
 ENDCLASS.

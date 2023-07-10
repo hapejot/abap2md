@@ -56,10 +56,10 @@
       <OBJECT>ZABAP2MD_PARAM</OBJECT>
       <LANGU>E</LANGU>
       <TYP>E</TYP>
-      <VERSION>0006</VERSION>
+      <VERSION>0007</VERSION>
       <MASTERLANG>X</MASTERLANG>
-      <TXTLINES>00016</TXTLINES>
-      <DOKSTATE>A</DOKSTATE>
+      <TXTLINES>00017</TXTLINES>
+      <DOKSTATE>R</DOKSTATE>
      </DOKIL>
      <HEAD>
       <TDOBJECT>DOKU</TDOBJECT>
@@ -68,7 +68,7 @@
       <TDSPRAS>E</TDSPRAS>
       <TDFORM>S_DOCU_SHOW</TDFORM>
       <TDSTYLE>S_DOCUS1</TDSTYLE>
-      <TDVERSION>00006</TDVERSION>
+      <TDVERSION>00007</TDVERSION>
       <TDLINESIZE>072</TDLINESIZE>
      </HEAD>
      <LINES>
@@ -98,47 +98,51 @@
       </TLINE>
       <TLINE>
        <TDFORMAT>U2</TDFORMAT>
-       <TDLINE>Überschrift 2. Ebene</TDLINE>
+       <TDLINE>Level 2 heading</TDLINE>
       </TLINE>
       <TLINE>
        <TDFORMAT>AS</TDFORMAT>
-       <TDLINE>Dummytext, damit die Überschrift bleibt.</TDLINE>
+       <TDLINE>Dummy text for this level.</TDLINE>
       </TLINE>
       <TLINE>
        <TDFORMAT>U3</TDFORMAT>
-       <TDLINE>Überschrift 3. Ebene</TDLINE>
+       <TDLINE>3rd level heading</TDLINE>
       </TLINE>
       <TLINE>
        <TDFORMAT>AS</TDFORMAT>
-       <TDLINE>Dummy wegen der Überschrift.</TDLINE>
+       <TDLINE>Another dummy under the 3rd level heading.</TDLINE>
       </TLINE>
       <TLINE>
        <TDFORMAT>U4</TDFORMAT>
-       <TDLINE>Überschrift 4. Ebene</TDLINE>
+       <TDLINE>Heading level 4</TDLINE>
       </TLINE>
       <TLINE>
        <TDFORMAT>N1</TDFORMAT>
-       <TDLINE>Erste Zeile der Aufzählung</TDLINE>
+       <TDLINE>First list of the enumeration</TDLINE>
       </TLINE>
       <TLINE>
        <TDFORMAT>N1</TDFORMAT>
-       <TDLINE>Zweite Zeile der Aufzählung, die hier in diesem Fall etwas länger werden</TDLINE>
+       <TDLINE>Second line of the enumeration with some more text in order to fill the</TDLINE>
       </TLINE>
       <TLINE>
        <TDFORMAT>=</TDFORMAT>
-       <TDLINE> wird und daher in mehrere Zeilen aufgeteilt werden muss.</TDLINE>
+       <TDLINE> line into more lines.</TDLINE>
       </TLINE>
       <TLINE>
        <TDFORMAT>B1</TDFORMAT>
-       <TDLINE>Liste 1.</TDLINE>
+       <TDLINE>List 1.</TDLINE>
       </TLINE>
       <TLINE>
        <TDFORMAT>B1</TDFORMAT>
-       <TDLINE>Liste 2.</TDLINE>
+       <TDLINE>List 2.</TDLINE>
       </TLINE>
       <TLINE>
        <TDFORMAT>B1</TDFORMAT>
-       <TDLINE>Liste 3.</TDLINE>
+       <TDLINE>List 3.</TDLINE>
+      </TLINE>
+      <TLINE>
+       <TDFORMAT>B1</TDFORMAT>
+       <TDLINE>Item 4</TDLINE>
       </TLINE>
       <TLINE>
        <TDFORMAT>U1</TDFORMAT>
