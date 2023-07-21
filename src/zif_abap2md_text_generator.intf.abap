@@ -4,6 +4,7 @@ INTERFACE zif_abap2md_text_generator
     BEGIN OF t_field_spec,
       name  TYPE string,
       title TYPE string,
+      style TYPE string,
     END OF t_field_spec,
     t_field_specs TYPE STANDARD TABLE OF t_field_spec WITH EMPTY KEY.
   METHODS:

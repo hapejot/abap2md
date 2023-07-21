@@ -59,7 +59,7 @@ CLASS zcl_abap2md_function_parser IMPLEMENTATION.
           APPEND VALUE #( name = to_upper( token-value ) ) TO current_info->params REFERENCE INTO param.
         ENDIF.
         next_token( ).
-        APPEND read_words( line ) TO param->text.
+        APPEND read_words_in_line( line ) TO param->text.
 
       WHEN OTHERS.
         super->handle_cmd( ).

@@ -19,7 +19,7 @@ CLASS zcl_abap2md_doc_parser DEFINITION
           current_text    TYPE REF TO zabap2md_text.
     METHODS next_token.
     METHODS require_current_text.
-    METHODS read_words
+    METHODS read_words_in_line
       IMPORTING
         i_line          TYPE i OPTIONAL
       RETURNING
@@ -114,14 +114,14 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
       current_text->*[ idx ] = current_text->*[ idx ] && token-value.
 *      next_token( ).
     ENDIF.
-    APPEND read_words( ) TO current_text->*.
+    APPEND read_words_in_line( ) TO current_text->*.
 
   ENDMETHOD.
 
   METHOD handle_word.
 
     require_current_text( ).
-    APPEND read_words( ) TO current_text->*.
+    APPEND read_words_in_line( ) TO current_text->*.
 
 
   ENDMETHOD.
@@ -146,7 +146,7 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
         name = token-value.
         line = token-line.
         next_token( ).
-        DATA(title) = read_words( line ).
+        DATA(title) = read_words_in_line( line ).
         current_page = REF #( doc->pages[ name = name ] OPTIONAL ).
         IF current_page IS INITIAL.
           APPEND VALUE #( name = name ) TO doc->pages REFERENCE INTO current_page.
@@ -166,7 +166,7 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
         IF current_section IS INITIAL.
           APPEND VALUE #( name = name ) TO current_page->sections REFERENCE INTO current_section.
           SORT current_page->sections BY name.
-          current_section->title = read_words( line ).
+          current_section->title = read_words_in_line( line ).
         ENDIF.
         current_text = REF #( current_section->text ).
 
@@ -178,7 +178,7 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
         subsection = REF #( current_section->subsections[ name = name ] OPTIONAL ).
         IF subsection IS INITIAL.
           APPEND VALUE #( name = name ) TO current_section->subsections REFERENCE INTO subsection.
-          subsection->title = read_words( line ).
+          subsection->title = read_words_in_line( line ).
         ENDIF.
         current_text = REF #( subsection->text ).
     ENDCASE.
@@ -186,7 +186,11 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
 
   ENDMETHOD.
 
-  METHOD read_words.
+  METHOD read_words_in_line.
+**/
+* reads all the remaining words on the same line.
+*/
+
     DATA(line) = i_line.
     IF line IS INITIAL.
       line = token-line.

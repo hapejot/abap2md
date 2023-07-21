@@ -17,11 +17,14 @@ INHERITING FROM zcl_abap2md_doc_parser
   PROTECTED SECTION.
     METHODS handle_cmd REDEFINITION.
     METHODS handle_end REDEFINITION.
-    methods handle_date REDEFINITION.
+    METHODS handle_date REDEFINITION.
   PRIVATE SECTION.
     DATA: m_report_name  TYPE progn,
           current_report TYPE REF TO zabap2md_program_info.
     METHODS report_name IMPORTING i_name TYPE progn.
+    METHODS parse_text
+      RETURNING
+        VALUE(r_result) TYPE zabap2md_text.
 ENDCLASS.
 
 
@@ -58,8 +61,8 @@ CLASS zcl_abap2md_report_parser IMPLEMENTATION.
           APPEND VALUE #( name = to_upper( token-value ) ) TO current_report->params REFERENCE INTO param.
         ENDIF.
         next_token( ).
-        APPEND read_words( line ) TO param->text.
-
+*        APPEND read_words_in_line( line ) TO param->text.
+        param->text = parse_text( ).
       WHEN OTHERS.
         super->handle_cmd( ).
     ENDCASE.
@@ -76,6 +79,41 @@ CLASS zcl_abap2md_report_parser IMPLEMENTATION.
     current_text = REF #( current_change->text ).
     next_token( ).
 
+  ENDMETHOD.
+
+
+  METHOD parse_text.
+    DATA text_line TYPE REF TO string.
+    DATA(c_line) = 0.
+
+    DO.
+      CASE token-type.
+        WHEN 'START'.
+          EXIT.
+        WHEN 'CMD'.
+          EXIT.
+        WHEN 'END'. " end of comment chunk is automatically end of pages and sections.
+          EXIT.
+
+        WHEN OTHERS.
+          IF c_line <> token-line.
+            IF c_line = 0.
+              c_line = token-line.
+              APPEND INITIAL LINE TO r_result REFERENCE INTO text_line.
+            ELSE.
+              WHILE c_line > 0 AND c_line < token-line.
+                APPEND INITIAL LINE TO r_result REFERENCE INTO text_line.
+                c_line = c_line + 1.
+              ENDWHILE.
+            ENDIF.
+          ENDIF.
+          ASSERT text_line IS BOUND.
+          text_line->* = |{ text_line->* } { token-value }|.
+      ENDCASE.
+
+      next_token( ).
+
+    ENDDO.
   ENDMETHOD.
 
 ENDCLASS.

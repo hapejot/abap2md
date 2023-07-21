@@ -159,23 +159,30 @@ CLASS zcl_abap2md_md_table IMPLEMENTATION.
 
 
     DATA: row_count TYPE i,
-          col_count TYPE i.
+          col_count TYPE i,
+          tmp_cols  LIKE cols,
+          col_ref   LIKE REF TO zcl_abap2md_md_table=>col.
 
     IF fields IS INITIAL.
       DELETE cols WHERE width = 0.
     ELSE.
-      LOOP AT cols INTO col.
-        IF NOT line_exists( fields[ name = col-name ] ).
-          DELETE cols.
+      LOOP AT fields INTO DATA(field).
+        col_ref = REF #( cols[ name = field-name ] OPTIONAL ).
+        IF col_ref IS BOUND.
+          APPEND col_ref->* TO tmp_cols.
         ENDIF.
       ENDLOOP.
+      cols = tmp_cols.
     ENDIF.
 
-    LOOP AT cols REFERENCE INTO DATA(col_ref).
+    LOOP AT cols REFERENCE INTO col_ref.
       DATA(n) = strlen( col_ref->name ).
       DATA(fld_ref) = REF #( fields[ name = col_ref->name ] OPTIONAL ).
       IF fld_ref IS BOUND AND fld_ref->title IS NOT INITIAL.
         n = strlen( fld_ref->title ).
+      ENDIF.
+      IF fld_ref->style = 'CODE'.
+        n = col_ref->width + 2.
       ENDIF.
       IF n > col_ref->width.
         col_ref->width = n.
@@ -278,7 +285,12 @@ CLASS zcl_abap2md_md_table IMPLEMENTATION.
                                  i_row    = i_idx
                                  i_col    = col-name
                              ).
-        line = |{ line }{ sep }{ c->get_line( i_idx = line_idx ) WIDTH = col-width }|.
+
+        DATA(txt) = c->get_line(  i_idx = line_idx ).
+        IF fields[ name = col-name ]-style = 'CODE'.
+          txt = |`{ txt }`|.
+        ENDIF.
+        line = |{ line }{ sep }{ txt WIDTH = col-width }|.
         IF pipe_separator = abap_true.
           sep = `|`.
         ELSE.

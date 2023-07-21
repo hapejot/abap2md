@@ -11,18 +11,6 @@
     <FIXPT>X</FIXPT>
     <UNICODE>X</UNICODE>
    </VSEOCLASS>
-   <DESCRIPTIONS>
-    <SEOCOMPOTX>
-     <CMPNAME>READ_DEPENDENCIES</CMPNAME>
-     <LANGU>E</LANGU>
-     <DESCRIPT>reading dependencies from the source code</DESCRIPT>
-    </SEOCOMPOTX>
-    <SEOCOMPOTX>
-     <CMPNAME>READ_DEPENDENCIES</CMPNAME>
-     <LANGU>W</LANGU>
-     <DESCRIPT>reading dependencies from the source code</DESCRIPT>
-    </SEOCOMPOTX>
-   </DESCRIPTIONS>
   </asx:values>
  </asx:abap>
 </abapGit>

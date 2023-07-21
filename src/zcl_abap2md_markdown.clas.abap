@@ -189,14 +189,21 @@ CLASS zcl_abap2md_markdown IMPLEMENTATION.
 
 
   METHOD zif_abap2md_text_generator~table.
-
-    DATA(tab) = NEW zcl_abap2md_md_table( ).
-    tab->load( it_table ).
-    tab->set_fields( it_fields ).
-    IF options-use_pipe_tables = abap_true.
-      tab->use_pipe_separator( ).
+**/ prepare the layout automatically for a given internal table.
+*
+* if the table is empty nothing will be added to the documentation.
+*
+* @param it_table any table that should be added to the output documentation.
+*/
+    IF it_table IS NOT INITIAL.
+      DATA(tab) = NEW zcl_abap2md_md_table( ).
+      tab->load( it_table ).
+      tab->set_fields( it_fields ).
+      IF options-use_pipe_tables = abap_true.
+        tab->use_pipe_separator( ).
+      ENDIF.
+      APPEND LINES OF tab->get_markdown( ) TO mt_text.
     ENDIF.
-    APPEND LINES OF tab->get_markdown( ) TO mt_text.
 
   ENDMETHOD.
 

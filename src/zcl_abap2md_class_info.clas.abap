@@ -50,7 +50,7 @@ CLASS zcl_abap2md_class_info DEFINITION
     METHODS parse_method_docu
       CHANGING
         !cs_method_info TYPE zabap2md_method_info .
-    METHODS read_dependencies .
+
     METHODS write_definition
       IMPORTING
         !i_description TYPE rswsourcet
@@ -71,7 +71,7 @@ ENDCLASS.
 
 
 
-CLASS ZCL_ABAP2MD_CLASS_INFO IMPLEMENTATION.
+CLASS zcl_abap2md_class_info IMPLEMENTATION.
 
 
   METHOD build_class_info.
@@ -125,37 +125,16 @@ CLASS ZCL_ABAP2MD_CLASS_INFO IMPLEMENTATION.
     ENDLOOP.
 
 * Dependencies
-    LOOP AT mv_refs INTO DATA(ref).
-      DATA(name) = ref-full_name+4.
-      DATA(kind) = cl_abap_classdescr=>get_class_name( ref-symbol ).
-      kind = |{ ref-tag }-{ kind+20 }|.
-      DATA(title) = ``.
-      CASE kind.
-        WHEN 'FU-SYMBOL'.
-          SELECT * FROM tftit
-                  WHERE funcname = @name
-                  INTO TABLE @DATA(lt_titles).
-          title = VALUE #( lt_titles[ spras = sy-langu ]-stext OPTIONAL ).
-          IF title IS INITIAL.
-            title = VALUE #( lt_titles[ 1 ]-stext OPTIONAL ).
-          ENDIF.
-
-        WHEN 'TY-CLASS'.
-          SELECT * FROM vseoclass
-                  WHERE clsname = @name
-                  INTO TABLE @DATA(lt_classes).
-          title = VALUE #( lt_classes[ langu = sy-langu ]-descript OPTIONAL ).
-          IF title IS INITIAL.
-            title = VALUE #( lt_classes[ 1 ]-descript OPTIONAL ).
-          ENDIF.
-
-      ENDCASE.
-      APPEND VALUE #(   name = name
-                        kind = kind
-                        title = title )
-        TO mr_info->dependencies.
-    ENDLOOP.
-    SORT mr_info->dependencies BY kind name.
+    DATA(dependencies) = NEW zcl_abap2md_dependencies( ).
+    dependencies->load_for(
+        i_compile_unit = ms_tadir-obj_name
+    ).
+    mr_info->dependencies = VALUE #(
+        ( LINES OF dependencies->get_functions( ) )
+        ( LINES OF dependencies->get_classes( ) )
+        ( LINES OF dependencies->get_tables( ) )
+        ( LINES OF dependencies->get_messages( ) )
+     ).
 
 * Source Code
     READ REPORT mv_class_include INTO lt_source.
@@ -413,40 +392,7 @@ CLASS ZCL_ABAP2MD_CLASS_INFO IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD read_dependencies.
 
-    DATA(comp) = NEW cl_abap_compiler( p_name  = mv_classpool ).
-
-    " ignoring all errors, if there are we just have no references.
-    comp->get_all_refs(
-      EXPORTING
-        p_local       = 'X'                 " Local classes too
-      p_extended    = 'X'                 " Enhanced Breakdown of Where-Used List
-      IMPORTING
-        p_result      = DATA(result)
-    ).
-    DATA interesting_tags TYPE RANGE OF scr_tag.
-    interesting_tags = VALUE #( sign = 'I' option = 'EQ'
-                                ( low = 'TY' )
-                                ( low = 'FU' )
-                                ( low = 'MN' ) ).
-    LOOP AT result INTO DATA(ref) WHERE tag IN interesting_tags.
-      IF ref-tag = 'MN'.
-        APPEND ref TO mv_refs.
-      ELSE.
-        DATA(name) = ref-full_name+3.
-        " skip
-        " - substructures
-        " - this class (no use in reporting it)
-        IF NOT name CS '\' AND NOT ref-full_name = |\\TY:{ ms_tadir-obj_name }|.
-          APPEND ref TO mv_refs.
-        ENDIF.
-      ENDIF.
-    ENDLOOP.
-    SORT mv_refs BY full_name.
-    DELETE ADJACENT DUPLICATES FROM mv_refs COMPARING full_name.
-
-  ENDMETHOD.
 
 
   METHOD try_read.
@@ -610,7 +556,6 @@ CLASS ZCL_ABAP2MD_CLASS_INFO IMPLEMENTATION.
     ENDIF.
 
     mv_classpool = lr_cifref->pool.
-    read_dependencies( ).
 * Read general class infos
     REFRESH lt_class_interface_ids.
     ls_class_interface_id-clsname = ms_tadir-obj_name.
