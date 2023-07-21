@@ -68,7 +68,7 @@ CLASS zcl_abap2md_doc_generator DEFINITION
         i_cls TYPE zabap2md_class_info.
     METHODS write_dependencies
       IMPORTING
-        i_dep TYPE zabap2md_dependencies
+        i_cls TYPE zabap2md_class_info
         i_gen TYPE REF TO zif_abap2md_text_generator.
     METHODS generate_method
       IMPORTING
@@ -187,7 +187,7 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
                     iv_text     =   |{ 'Class'(004) } { i_cls-name }|
      )->text(                       i_cls-text ).
 
-    write_dependencies(   i_dep = i_cls-dependencies
+    write_dependencies(   i_cls = i_cls
                           i_gen = i_gen ).
 
     LOOP AT i_cls-methods INTO DATA(method).
@@ -219,9 +219,6 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
       generate_changes( i_gen     = i_gen
                         i_changes = i_fun-changes ).
     ENDIF.
-
-    write_dependencies(   i_dep = i_fun-dependencies
-                          i_gen = i_gen ).
 
   ENDMETHOD.
 
@@ -332,27 +329,6 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD generate_param_def_list.
-
-    LOOP AT i_params INTO DATA(param).
-      DATA(txt) = VALUE stringtab( ).
-      IF param-title IS NOT INITIAL.
-        APPEND param-title TO txt.
-        APPEND `` TO txt.
-      ENDIF.
-      IF param-text IS NOT INITIAL.
-        APPEND LINES OF param-text TO txt.
-      ENDIF.
-      IF txt IS NOT INITIAL.
-        i_gen->definition(  iv_text = txt
-                            iv_def  = param-name    ).
-      ENDIF.
-    ENDLOOP.
-
-
-  ENDMETHOD.
-
-
   METHOD generate_report.
 
     i_gen->heading( iv_level = 1
@@ -360,11 +336,6 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
                                   explained_name( i_name = i_prg-name
                                                   i_title = i_prg-title ) }|
     )->text( i_prg-text ).
-
-    write_dependencies(   i_dep = i_prg-dependencies
-                       i_gen = i_gen ).
-
-
     generate_param_def_list(     i_gen = i_gen
                             i_params = i_prg-params ).
 
@@ -386,6 +357,27 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
                 it_fields = VALUE #( ( name = 'NAME' title = 'Fieldname' )
                                      ( name = 'TEXT' title = 'Description' ) ) ).
 
+
+
+  ENDMETHOD.
+
+
+  METHOD generate_param_def_list.
+
+    LOOP AT i_params INTO DATA(param).
+      DATA(txt) = VALUE stringtab( ).
+      IF param-title IS NOT INITIAL.
+        APPEND param-title TO txt.
+        APPEND `` TO txt.
+      ENDIF.
+      IF param-text IS NOT INITIAL.
+        APPEND LINES OF param-text TO txt.
+      ENDIF.
+      IF txt IS NOT INITIAL.
+        i_gen->definition(  iv_text = txt
+                            iv_def  = param-name    ).
+      ENDIF.
+    ENDLOOP.
 
 
   ENDMETHOD.
@@ -466,51 +458,40 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
 
   METHOD write_dependencies.
 
-    DATA: dep           LIKE LINE OF i_dep,
-          title_written TYPE abap_bool,
-          dependencies  LIKE i_dep.
+    DATA: dep           LIKE LINE OF i_cls-dependencies,
+          dependencies  LIKE i_cls-dependencies,
+          title_written TYPE abap_bool.
     CLEAR title_written.
 
 
-    dependencies = VALUE #( FOR <row> IN i_dep WHERE ( kind = 'FU-SYMBOL' ) ( <row> ) ).
+    dependencies = VALUE #( FOR <row> IN i_cls-dependencies WHERE ( kind = 'FU-SYMBOL' ) ( <row> ) ).
     IF dependencies IS NOT INITIAL.
       i_gen->heading( iv_level = 2 iv_text = 'Referenced Function Modules' ).
       i_gen->table(
           it_table  = dependencies
-          it_fields = VALUE #( ( name = 'NAME' title = 'Name' )
-                               ( name = 'TITLE' title = 'Description' ) )
+          it_fields = VALUE #( ( name = 'NAME' title = 'Name' ) ( name = 'TITLE' title = 'Description' ) )
       ).
     ENDIF.
 
-    dependencies = VALUE #( FOR <row> IN i_dep WHERE ( kind = 'TY-CLASS' AND name > 'Z' ) ( <row> ) ).
+    dependencies = VALUE #( FOR <row> IN i_cls-dependencies WHERE ( kind = 'TY-CLASS' AND name > 'Z' ) ( <row> ) ).
     IF dependencies IS NOT INITIAL.
       i_gen->heading( iv_level = 2 iv_text = 'Referenced Custom Classes'
       )->table(
         it_table  = dependencies
-        it_fields = VALUE #( ( name = 'NAME' title = 'Name' )
-                             ( name = 'TITLE' title = 'Description' ) )
+        it_fields = VALUE #( ( name = 'NAME' title = 'Name' ) ( name = 'TITLE' title = 'Description' ) )
     ).
     ENDIF.
+*
+*    LOOP AT i_cls-dependencies INTO dep WHERE kind = 'TY-CLASS'.
+*      CHECK dep-name(1) = 'Z'.
+*      IF title_written IS INITIAL.
+*        i_gen->heading( iv_level = 2 iv_text = 'Referenced Custom Classes' ).
+*        title_written = abap_true.
+*      ENDIF.
+*      i_gen->definition(    iv_text = |{ dep-title }|
+*                                  iv_def  = dep-name ).
+*    ENDLOOP.
 
-    dependencies = VALUE #( FOR <row> IN i_dep WHERE ( kind = 'TY-DDIC_DBTAB' ) ( <row> ) ).
-    IF dependencies IS NOT INITIAL.
-      i_gen->heading( iv_level = 2 iv_text = 'Referenced Database Tables and Structures'
-      )->table(
-        it_table  = dependencies
-        it_fields = VALUE #( ( name = 'NAME' title = 'Name' )
-                             ( name = 'TITLE' title = 'Description' ) )
-    ).
-    ENDIF.
-
-    dependencies = VALUE #( FOR <row> IN i_dep WHERE ( kind = 'MN-SYMBOL' ) ( <row> ) ).
-    IF dependencies IS NOT INITIAL.
-      i_gen->heading( iv_level = 2 iv_text = 'Reported Messages'
-      )->table(
-        it_table  = dependencies
-        it_fields = VALUE #( ( name = 'NAME' title = 'Name' )
-                             ( name = 'TITLE' title = 'Description' ) )
-    ).
-    ENDIF.
 
 
   ENDMETHOD.

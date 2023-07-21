@@ -20,7 +20,6 @@ CLASS zcl_abap2md_table_info DEFINITION
         VALUE(ro_result) TYPE REF TO zif_abap2md_info.
     METHODS constructor
       IMPORTING
-        iv_name        TYPE tadir-obj_name
         iv_state       TYPE ddgotstate
         iv_hd          TYPE dd02v
         iv_tech        TYPE dd09v
@@ -40,19 +39,17 @@ CLASS zcl_abap2md_table_info DEFINITION
       IMPORTING
                 i_lines       TYPE ty_pline
       RETURNING VALUE(r_text) TYPE zabap2md_text.
-    DATA:
-      m_name        TYPE ddobjname,
-      m_state       TYPE ddgotstate,
-      m_hd          TYPE dd02v,
-      m_tech        TYPE dd09v,
-      m_fields      TYPE tt_fields,
-      m_fkeyfields  TYPE tt_fkeyfields,
-      m_fkeys       TYPE tt_fkeys,
-      m_indexes     TYPE tt_indexes,
-      m_indexfields TYPE tt_indexfields,
-      m_shelps      TYPE tt_shelps,
-      m_shelp_alloc TYPE tt_shelp_alloc,
-      m_rfc_flds    TYPE STANDARD TABLE OF rfc_fields.
+    CLASS-DATA: m_name        TYPE ddobjname.
+    DATA: m_state       TYPE ddgotstate,
+          m_hd          TYPE dd02v,
+          m_tech        TYPE dd09v,
+          m_fields      TYPE tt_fields,
+          m_fkeyfields  TYPE tt_fkeyfields,
+          m_fkeys       TYPE tt_fkeys,
+          m_indexes     TYPE tt_indexes,
+          m_indexfields TYPE tt_indexfields,
+          m_shelps      TYPE tt_shelps,
+          m_shelp_alloc TYPE tt_shelp_alloc.
 
 ENDCLASS.
 
@@ -63,7 +60,6 @@ CLASS zcl_abap2md_table_info IMPLEMENTATION.
 
   METHOD constructor.
 
-    me->m_name = iv_name.
     me->m_state = iv_state.
     me->m_hd = iv_hd.
     me->m_tech = iv_tech.
@@ -172,10 +168,11 @@ CLASS zcl_abap2md_table_info IMPLEMENTATION.
           l_indexfields TYPE STANDARD TABLE OF dd17v,
           l_shelps      TYPE STANDARD TABLE OF dd35v,
           l_shelp_alloc TYPE STANDARD TABLE OF dd36m.
+    m_name = iv_name.
 
     CALL FUNCTION 'DDIF_TABL_GET'
       EXPORTING
-        name          = CONV ddobjname( iv_name )
+        name          = m_name
 *       state         = 'A'
         langu         = sy-langu
       IMPORTING
@@ -193,11 +190,8 @@ CLASS zcl_abap2md_table_info IMPLEMENTATION.
       EXCEPTIONS
         illegal_input = 1
         OTHERS        = 2.
-    IF sy-subrc = 0
-        AND l_fields IS NOT INITIAL
-        AND  l_hd-tabname IS NOT INITIAL.
+    IF sy-subrc = 0.
       DATA(obj) = NEW zcl_abap2md_table_info(
-        iv_name         = iv_name
         iv_state        = l_state
         iv_hd           = l_hd
         iv_tech         = l_tech
@@ -244,7 +238,7 @@ CLASS zcl_abap2md_table_info IMPLEMENTATION.
       cur_table->text = sapscript_to_markdown( pline ).
     ENDIF.
 
-    LOOP AT m_fields REFERENCE INTO DATA(fld) WHERE depth = 0 AND fieldname <> '.INCLUDE'.
+    LOOP AT m_fields REFERENCE INTO DATA(fld).
       CLEAR text.
       IF fld->ddtext IS NOT INITIAL.
         APPEND fld->ddtext TO text.

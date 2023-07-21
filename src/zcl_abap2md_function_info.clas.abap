@@ -56,7 +56,7 @@ ENDCLASS.
 
 
 
-CLASS zcl_abap2md_function_info IMPLEMENTATION.
+CLASS ZCL_ABAP2MD_FUNCTION_INFO IMPLEMENTATION.
 
 
   METHOD constructor.
@@ -241,19 +241,6 @@ CLASS zcl_abap2md_function_info IMPLEMENTATION.
     READ REPORT lv_include INTO m_src.
 
 *    parse_docu( ).
-
-    DATA(dependencies) = NEW zcl_abap2md_dependencies( ).
-    dependencies->load_for(
-        i_compile_unit = ms_tfdir-pname
-        i_include      = lv_include
-    ).
-    mr_info->dependencies = VALUE #(
-        ( LINES OF dependencies->get_functions( ) )
-        ( LINES OF dependencies->get_classes( ) )
-        ( LINES OF dependencies->get_tables( ) )
-        ( LINES OF dependencies->get_messages( ) )
-     ).
-
 
     DATA(parser) = zcl_abap2md_function_parser=>create(
                 i_code   = m_src

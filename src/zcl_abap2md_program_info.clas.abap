@@ -12,19 +12,18 @@ CLASS zcl_abap2md_program_info DEFINITION
         VALUE(ro_result) TYPE REF TO zif_abap2md_info.
     METHODS constructor
       IMPORTING
-        is_hd TYPE trdir.
+        is_tadir TYPE tadir.
 
   PROTECTED SECTION.
 
   PRIVATE SECTION.
     DATA:
-*      ms_tadir       TYPE tadir,
+      ms_tadir       TYPE tadir,
       ms_text        TYPE trdirt,
       mv_description TYPE rswsourcet,
       ms_hd          TYPE trdir,
       mr_info        TYPE REF TO zabap2md_program_info,
-      m_src          TYPE stringtab,
-      mt_refs        TYPE STANDARD TABLE OF scr_glref WITH EMPTY KEY.
+      m_src          TYPE stringtab.
     METHODS        user_name
       IMPORTING
                 iv_uname       TYPE syst_uname
@@ -48,18 +47,16 @@ CLASS zcl_abap2md_program_info DEFINITION
         i_field_name TYPE fieldname OPTIONAL
       RETURNING
         VALUE(title) TYPE string.
-
-    METHODS write_dependencies_to_doc.
 ENDCLASS.
 
 
 
-CLASS zcl_abap2md_program_info IMPLEMENTATION.
+CLASS ZCL_ABAP2MD_PROGRAM_INFO IMPLEMENTATION.
 
 
   METHOD constructor.
 
-    me->ms_hd = is_hd.
+    me->ms_tadir = is_tadir.
 
   ENDMETHOD.
 
@@ -156,19 +153,13 @@ CLASS zcl_abap2md_program_info IMPLEMENTATION.
 
     DATA: ls_tadir TYPE tadir.
     SELECT SINGLE *
-                FROM trdir
-                WHERE name = @iv_name
-                AND subc <> 'I'
-                INTO @DATA(ls_hd).
-
+                FROM tadir
+                WHERE pgmid = 'R3TR'
+                AND object = 'PROG'
+                AND obj_name = @iv_name
+                INTO @ls_tadir.
     IF sy-subrc = 0. " found this to be a program name...
-*      SELECT SINGLE *
-*                  FROM tadir
-*                  WHERE pgmid = 'R3TR'
-*                  AND object = 'PROG'
-*                  AND obj_name = @iv_name
-*                  INTO @ls_tadir.
-      ro_result = NEW zcl_abap2md_program_info( ls_hd ).
+      ro_result = NEW zcl_abap2md_program_info( ls_tadir ).
     ENDIF.
 
   ENDMETHOD.
@@ -199,20 +190,25 @@ CLASS zcl_abap2md_program_info IMPLEMENTATION.
     DATA: pars TYPE STANDARD TABLE OF rsel_paras.
     SELECT SINGLE *
                 FROM trdirt
-                WHERE name = @ms_hd-name
+                WHERE name = @ms_tadir-obj_name
                 AND sprsl = @sy-langu
                 INTO @ms_text.
 
 
+    SELECT SINGLE *
+                FROM trdir
+                WHERE name = @ms_tadir-obj_name
+                INTO @ms_hd.
+
     IF i_gen IS BOUND.
       DATA(doc) = i_gen->doc( ).
-      APPEND VALUE #(   name    = ms_hd-name
+      APPEND VALUE #(   name    = ms_tadir-obj_name
                         title   = ms_text-text )
             TO  doc->programs REFERENCE INTO mr_info.
 
       CALL FUNCTION 'SELOPTS_AND_PARAMS'
         EXPORTING
-          program = ms_hd-name
+          program = ms_tadir-obj_name
         TABLES
           selpars = pars
         EXCEPTIONS
@@ -235,20 +231,18 @@ CLASS zcl_abap2md_program_info IMPLEMENTATION.
 *      i_gen->add_text( m_src ).
 *
 *      mr_info->text = parse_docu( REF #( lt_text ) ).
-      write_dependencies_to_doc( ).
+
+
       DATA(cut) = zcl_abap2md_report_parser=>create(
                   i_code   = m_src
                   i_doc    = doc
-                  i_report_name = ms_hd-name
+                  i_report_name = ms_tadir-obj_name
               ).
       cut->parse( ).
 
     ENDIF.
 
   ENDMETHOD.
-
-
-
 
 
   METHOD zif_abap2md_info~generate_markdown.
@@ -267,7 +261,7 @@ CLASS zcl_abap2md_program_info IMPLEMENTATION.
 
     DATA(lo_markdown) = CAST zif_abap2md_text_generator( NEW zcl_abap2md_markdown( VALUE #( ) ) ).
 
-    lo_markdown->heading( iv_level = 1 iv_text = ms_hd-name
+    lo_markdown->heading( iv_level = 1 iv_text = ms_tadir-obj_name
                 )->text( ms_text-text
                 )->new_paragraph(
                 )->text( mv_description
@@ -282,26 +276,9 @@ CLASS zcl_abap2md_program_info IMPLEMENTATION.
 
     DATA: texttab TYPE STANDARD TABLE OF textpool,
           pars    TYPE STANDARD TABLE OF rsel_paras.
-    READ TEXTPOOL ms_hd-name LANGUAGE sy-langu INTO texttab.
+    READ TEXTPOOL ms_tadir-obj_name LANGUAGE sy-langu INTO texttab.
 
-    READ REPORT ms_hd-name INTO m_src.
-
-  ENDMETHOD.
-
-  METHOD write_dependencies_to_doc.
-
-    DATA(dependencies) = NEW zcl_abap2md_dependencies( ).
-    dependencies->load_for(
-        i_compile_unit = ms_hd-name
-*        i_include      = lv_include
-    ).
-    mr_info->dependencies = VALUE #(
-        ( LINES OF dependencies->get_functions( ) )
-        ( LINES OF dependencies->get_classes( ) )
-        ( LINES OF dependencies->get_tables( ) )
-        ( LINES OF dependencies->get_messages( ) )
-     ).
+    READ REPORT ms_tadir-obj_name INTO m_src.
 
   ENDMETHOD.
-
 ENDCLASS.
