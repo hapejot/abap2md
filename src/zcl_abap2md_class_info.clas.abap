@@ -127,7 +127,7 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
 * Dependencies
     DATA(dependencies) = NEW zcl_abap2md_dependencies( ).
     dependencies->load_for(
-        i_compile_unit = ms_tadir-obj_name
+        i_compile_unit = mv_classpool
     ).
     mr_info->dependencies = VALUE #(
         ( LINES OF dependencies->get_functions( ) )

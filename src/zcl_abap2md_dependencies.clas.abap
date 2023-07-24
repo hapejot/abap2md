@@ -46,7 +46,19 @@ CLASS zcl_abap2md_dependencies IMPLEMENTATION.
     DATA obj TYPE REF TO cl_abap_comp_class.
     LOOP AT mt_refs INTO DATA(l_ref) WHERE tag = 'TY'.
       TRY.
-          obj ?= l_ref-symbol.
+          DATA: type_name(100) TYPE c.
+          type_name = l_ref-full_name+4.
+          CALL METHOD cl_abap_typedescr=>describe_by_name
+            EXPORTING
+              p_name         = type_name    " Type name
+            RECEIVING
+              p_descr_ref    = DATA(xref)
+            EXCEPTIONS
+              type_not_found = 1
+              OTHERS         = 2.
+          CHECK sy-subrc = 0.
+          CHECK xref->kind = cl_abap_typedescr=>kind_class.
+
           DATA(name) = l_ref-full_name+4.
           IF NOT name CA '\'.
             SELECT * FROM vseoclass
@@ -58,7 +70,7 @@ CLASS zcl_abap2md_dependencies IMPLEMENTATION.
             ENDIF.
           ENDIF.
           APPEND VALUE zabap2md_dependency(
-                          kind  =  get_kind( l_ref )
+                          kind  = 'TY-CLASS'
                           name  = name
                           title = title
                       ) TO r_result.
@@ -84,7 +96,7 @@ CLASS zcl_abap2md_dependencies IMPLEMENTATION.
         title = VALUE #( lt_titles[ 1 ]-stext OPTIONAL ).
       ENDIF.
       APPEND VALUE zabap2md_dependency(
-                      kind  =  get_kind( l_ref )
+                      kind  =  'FU-SYMBOL'
                       name  = name
                       title = title
                   ) TO r_result.
@@ -112,7 +124,7 @@ CLASS zcl_abap2md_dependencies IMPLEMENTATION.
             WITH '&1' '&2' '&3' '&4'
             INTO DATA(lv_msg).
       APPEND VALUE zabap2md_dependency(
-                      kind  =  get_kind( l_ref )
+                      kind  =  'MN-SYMBOL'
                       name  = |{ msgid }-{ msgno }|
                       title = lv_msg
                   ) TO r_result.
@@ -124,9 +136,29 @@ CLASS zcl_abap2md_dependencies IMPLEMENTATION.
     DATA obj TYPE REF TO cl_abap_comp_ddic_dbtab.
     LOOP AT mt_refs INTO DATA(l_ref) WHERE tag = 'TY'.
       TRY.
+          CHECK l_ref-full_name(4) = '\TY:'.
           DATA new_ref TYPE zabap2md_dependency.
-          obj ?= l_ref-symbol.
-          new_ref-name = l_ref-full_name+4.
+          DATA: type_name(100) TYPE c.
+          type_name = l_ref-full_name+4.
+          CALL METHOD cl_abap_typedescr=>describe_by_name
+            EXPORTING
+              p_name         = type_name    " Type name
+            RECEIVING
+              p_descr_ref    = DATA(xref)
+            EXCEPTIONS
+              type_not_found = 1
+              OTHERS         = 2.
+          CHECK sy-subrc = 0.
+          CHECK xref->kind = cl_abap_typedescr=>kind_struct.
+          SELECT SINGLE tabclass
+                FROM dd02l
+                WHERE tabname = @type_name
+                INTO @DATA(tab_class).
+          CHECK sy-subrc = 0.
+          CHECK tab_class = 'TRANSP'.
+          DATA(tab_descr) = CAST cl_abap_structdescr( xref ).
+          new_ref-name = type_name.
+
           IF NOT new_ref-name CA '\'.
             SELECT * FROM dd02t
                     WHERE tabname = @new_ref-name
@@ -135,7 +167,7 @@ CLASS zcl_abap2md_dependencies IMPLEMENTATION.
             IF new_ref-title IS INITIAL.
               new_ref-title = VALUE #( lt_tabs[ 1 ]-ddtext OPTIONAL ).
             ENDIF.
-            new_ref-kind = get_kind( l_ref ).
+            new_ref-kind = 'TY-DDIC_DBTAB'.
             APPEND new_ref TO r_result.
           ENDIF.
         CATCH cx_sy_move_cast_error.
@@ -178,7 +210,7 @@ CLASS zcl_abap2md_dependencies IMPLEMENTATION.
     comp->get_all_refs(
       EXPORTING
         p_local       = 'X'                 " Local classes too
-*        p_extended    = 'X'                 " this causes an exception in some classes
+*        p_extended    = 'X'                 " will populate symbols, this causes an exception in some classes
         p_types       = interesting_tags
       IMPORTING
         p_result      = result
@@ -186,7 +218,7 @@ CLASS zcl_abap2md_dependencies IMPLEMENTATION.
 
     mt_refs = result.
     SORT mt_refs BY full_name.
-
+    DELETE ADJACENT DUPLICATES FROM mt_refs COMPARING full_name.
   ENDMETHOD.
 
 
