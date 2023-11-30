@@ -1,5 +1,5 @@
 **/
-* @page main ABAP to Markdown
+* @page 1 ABAP to Markdown
 *
 * For generating documentation for existing ABAP code one can use several ways.
 * running the report for downloading a complete markdown document is one of it.
@@ -7,6 +7,43 @@
 * in a more automated fashion on the client.
 *
 */
+
+**/
+* @page 2 Reference
+*
+*    **@@page \<name\> (title)**
+*
+*    Indicates that a comment block contains a piece of documentation that
+*    is not directly related to one specific class, file or member.
+*
+*    Example:
+*
+*```
+*    **/
+*    * @page page1 A documentation page
+*    *
+*    * Leading text.
+*    * @section sec An example section
+*    * This page contains the subsections \ref subsection1 and \ref subsection2.
+*    * For more info see page \ref page2.
+*    * @@subsection subsection1 The first subsection
+*    * Text.
+*    * @@subsection subsection2 The second subsection
+*    * More text.
+*    */
+*
+*    **/
+*    * @page page2 Another page
+*    *  Even more info.
+*    */
+*```
+*
+*    Note:
+*
+*    The <name> argument consists of a combination of letters and number digits.
+*
+*/
+
 
 **/
 * @page p2 General procedure of document setup

@@ -5,7 +5,9 @@ CLASS ltcl_main DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     METHODS:
       parse_report FOR TESTING RAISING cx_static_check,
-      test_read_report FOR TESTING RAISING cx_static_check.
+      test_read_report FOR TESTING RAISING cx_static_check,
+      escaped_page FOR TESTING RAISING cx_static_check,
+      escaped_with_sep FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 
@@ -140,19 +142,76 @@ CLASS ltcl_main IMPLEMENTATION.
 
 
   METHOD test_read_report.
-    DATA: src TYPE stringtab,
-          prg TYPE progn,
-          doc TYPE zabap2md_doc_structure.
-    prg = 'ZR_ABAP2MD_MAIN'.
-    READ REPORT prg INTO src.
+*    DATA: src TYPE stringtab,
+*          prg TYPE progn,
+*          doc TYPE zabap2md_doc_structure.
+*    prg = 'ZR_ABAP2MD_MAIN'.
+*    READ REPORT prg INTO src.
+*    DATA(cut) = zcl_abap2md_report_parser=>create(
+*                i_code   = src
+*                i_doc    = REF #( doc )
+*                i_report_name = prg
+*            ).
+*    cut->parse( ).
+*    cl_abap_unit_assert=>assert_equals( exp = 2 act = lines( doc-pages ) ).
+
+  ENDMETHOD.
+
+
+  METHOD escaped_page.
+    DATA src TYPE stringtab.
+    DATA doc TYPE zabap2md_doc_structure.
+    src = VALUE #(
+  ( |**/| )
+  ( |* @page main ABAP to Markdown| )
+  ( |*| )
+  ( |* A @@page name.| )
+  ).
+    DATA(exp) = VALUE stringtab(
+      ( `` )
+      ( `A @page` )
+      ( `name.` )
+      ).
     DATA(cut) = zcl_abap2md_report_parser=>create(
                 i_code   = src
                 i_doc    = REF #( doc )
-                i_report_name = prg
+                i_report_name = 'TEST_REPORT'
             ).
     cut->parse( ).
-    cl_abap_unit_assert=>assert_equals( exp = 2 act = lines( doc-pages ) ).
+    DATA(r) = REF #( doc-pages[ 1 ] ).
+    DATA(d) = r->text.
+    cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( doc-pages ) ).
+    cl_abap_unit_assert=>assert_equals( exp = exp act = d ).
 
   ENDMETHOD.
+
+  METHOD escaped_with_sep.
+    DATA src TYPE stringtab.
+    DATA doc TYPE zabap2md_doc_structure.
+    src = VALUE #(
+  ( |**/| )
+  ( |* @page main ABAP to Markdown| )
+  ( |*| )
+  ( |* A **@@page** name.| )
+  ).
+    DATA(exp) = VALUE stringtab(
+      ( `` )
+      ( `A ** @page**` )
+      ( `name.` )
+      ).
+    DATA(cut) = zcl_abap2md_report_parser=>create(
+                i_code   = src
+                i_doc    = REF #( doc )
+                i_report_name = 'TEST_REPORT'
+            ).
+    cut->parse( ).
+    DATA(r) = REF #( doc-pages[ 1 ] ).
+    DATA(d) = r->text.
+    cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( doc-pages ) ).
+    cl_abap_unit_assert=>assert_equals( exp = exp act = d ).
+
+  ENDMETHOD.
+
+
 
 ENDCLASS.

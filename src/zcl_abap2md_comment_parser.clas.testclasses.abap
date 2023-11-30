@@ -17,7 +17,7 @@ CLASS ltcl_parse_comment_multi IMPLEMENTATION.
     mv_code = VALUE stringtab(
                     ( `**/` )
                     ( `* @page page1 A documentation page` )
-                    ( `*@tableofcontents` )
+                    ( `*@@tableofcontents` )
                     ( |*| )
                     ( `* Leading text.` )
                     ( `*@section sec An example section` )
@@ -50,7 +50,7 @@ CLASS ltcl_parse_comment_multi IMPLEMENTATION.
     DATA(cut) = CAST zif_abap2md_parser( NEW zcl_abap2md_comment_parser( mv_code ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'START' line =  1 ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'LINE'  line =  2 value = '@page page1 A documentation page'  ) act = cut->next_token( ) ).
-    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'LINE'  line =  3 value = '@tableofcontents'  ) act = cut->next_token( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'LINE'  line =  3 value = '@@tableofcontents'  ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'LINE'  line =  4 value = ''  ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'LINE'  line =  5 value = 'Leading text.'  ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'LINE'  line =  6 value = '@section sec An example section'  ) act = cut->next_token( ) ).

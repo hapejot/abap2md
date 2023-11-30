@@ -139,8 +139,9 @@ CLASS zcl_abap2md_tag_def_parser IMPLEMENTATION.
     rules = VALUE #(    ( |^(```[\{][.][a-zA-Z]+)| )                        " F
                         ( `^ *([0-9]{1,4}[.-][0-9]{1,2}[.-][0-9]{1,4})` )   " A
                         ( `@([a-zA-Z0-9]+) *` )                             " B
+                        ( `(@@)` )                                          " G
                         ( `([.,;:/])` )                                     " C
-                        ( `([^ .,;:/]+) *` )                                " D
+                        ( `([^ .,;:/@]+) *` )                               " D regular words
                         ( `^( *)$` )                                        " E
                         ).
     IF m_regex IS INITIAL.
@@ -173,17 +174,24 @@ CLASS zcl_abap2md_tag_def_parser IMPLEMENTATION.
       IF m_matcher->find_next( ).
         DATA(s_a) = m_matcher->get_submatch( 2 ).
         DATA(s_b) = m_matcher->get_submatch( 3 ).
-        DATA(s_c) = m_matcher->get_submatch( 4 ).
-        DATA(s_d) = m_matcher->get_submatch( 5 ).
-        DATA(s_e) = m_matcher->get_submatch( 6 ).
+        DATA(s_c) = m_matcher->get_submatch( 5 ).
+        DATA(s_d) = m_matcher->get_submatch( 6 ).
+        DATA(s_e) = m_matcher->get_submatch( 7 ).
         DATA(s_f) = m_matcher->get_submatch( 1 ).
-        DATA(line) = m_matcher->get_line( ).
+        DATA(s_g) = m_matcher->get_submatch( 4 ).
+        r_result = VALUE #( line = m_matcher->get_line( ) ).
         IF s_b IS NOT INITIAL.
-          r_result = VALUE #(  type = 'CMD' value = s_b line = line ).
+          r_result-type = 'CMD'.
+          r_result-value = s_b.
+        ELSEIF s_g IS NOT INITIAL.
+          r_result-type = 'CMD'.
+          r_result-value = '@'.
         ELSEIF s_c IS NOT INITIAL.
-          r_result = VALUE #( type = 'SEP' value = s_c line = line ).
+          r_result-type = 'SEP'.
+          r_result-value = s_c.
         ELSEIF s_d IS NOT INITIAL.
-          r_result = VALUE #( type = 'WORD' value = s_d line = line ).
+          r_result-type = 'WORD'.
+          r_result-value = s_d.
         ELSEIF s_a IS NOT INITIAL.
           DATA year(4) TYPE c.
           DATA month(2) TYPE c.
@@ -192,19 +200,20 @@ CLASS zcl_abap2md_tag_def_parser IMPLEMENTATION.
           IF year IS INITIAL.
             SPLIT s_a AT '-' INTO year month day.
           ENDIF.
-          r_result = VALUE #(   type = 'DATE'
-                                value = |{ year }{
-                                            month ALIGN = RIGHT PAD = '0' WIDTH = 2 }{
-                                            day ALIGN = RIGHT PAD = '0' WIDTH = 2 }|
-                                line = line ).
+          r_result-type = 'DATE'.
+
+          r_result-value = |{ year }{
+                                                      month ALIGN = RIGHT PAD = '0' WIDTH = 2 }{
+                                                      day ALIGN = RIGHT PAD = '0' WIDTH = 2 }|.
         ELSEIF s_f IS NOT INITIAL.
-          r_result = VALUE #( type = 'WORD' value = s_f line = line ).
+          r_result-type = 'WORD'.
+          r_result-value = s_f.
         ELSE. " the only alternative with an empty result so we cannot check for it.
-          r_result = VALUE #( type = 'PARSEP' line = line ).
+          r_result-type = 'PARSEP'.
         ENDIF.
       ELSE.
         CLEAR m_matcher.
-        r_result = VALUE #( type = 'END' ).
+        r_result-type = 'END'.
       ENDIF.
     ELSE.
       r_result = m_pushed.

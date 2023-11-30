@@ -32,6 +32,9 @@ CLASS zcl_abap2md_doc_parser DEFINITION
     METHODS handle_start.
     METHODS handle_date.
   PRIVATE SECTION.
+    METHODS add_string
+      IMPORTING
+        i_string TYPE any OPTIONAL.
 
 ENDCLASS.
 
@@ -106,6 +109,19 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD add_string.
+**/
+* adding a given string at the current position of the current text.
+*/
+    require_current_text( ).
+    DATA(idx) = lines( current_text->* ).
+    IF idx > 0.
+      current_text->*[ idx ] = current_text->*[ idx ] && i_string.
+    ENDIF.
+
+  ENDMETHOD.
+
+
   METHOD handle_sep.
 
     require_current_text( ).
@@ -140,6 +156,11 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
     DATA name TYPE string.
 
     CASE token-value.
+
+      WHEN '@'.
+        next_token( ).
+        add_string( | @{ token-value }|  ).
+        next_token( ).
 
       WHEN 'page'.
         next_token( ).
@@ -195,7 +216,7 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
     IF line IS INITIAL.
       line = token-line.
     ENDIF.
-    WHILE token-line = line.
+    WHILE token-line = line AND ( token-type = 'WORD' OR token-type = 'SEP' ).
       IF r_result IS INITIAL.
         r_result = token-value.
       ELSE.

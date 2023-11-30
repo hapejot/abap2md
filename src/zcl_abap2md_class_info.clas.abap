@@ -71,7 +71,7 @@ ENDCLASS.
 
 
 
-CLASS zcl_abap2md_class_info IMPLEMENTATION.
+CLASS ZCL_ABAP2MD_CLASS_INFO IMPLEMENTATION.
 
 
   METHOD build_class_info.
@@ -135,6 +135,8 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
         ( LINES OF dependencies->get_tables( ) )
         ( LINES OF dependencies->get_messages( ) )
      ).
+
+    DELETE mr_info->dependencies WHERE name = ms_tadir-obj_name.
 
 * Source Code
     READ REPORT mv_class_include INTO lt_source.
@@ -392,9 +394,6 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
   ENDMETHOD.
 
 
-
-
-
   METHOD try_read.
     DATA: ls_tadir TYPE tadir.
     SELECT SINGLE *
@@ -402,6 +401,7 @@ CLASS zcl_abap2md_class_info IMPLEMENTATION.
                 WHERE pgmid = 'R3TR'
                 AND object = 'CLAS'
                 AND obj_name = @iv_name
+                AND delflag = @space
                 INTO @ls_tadir.
     IF sy-subrc = 0. " found this to be a class name...
       ro_result = NEW zcl_abap2md_class_info( ls_tadir ).

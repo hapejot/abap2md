@@ -34,11 +34,15 @@ CLASS zcl_abap2md_table_info DEFINITION
   PROTECTED SECTION.
   PRIVATE SECTION.
     TYPES:
-      ty_pline   TYPE STANDARD TABLE OF tline WITH DEFAULT KEY,
+      t_td_line  TYPE STANDARD TABLE OF tline WITH EMPTY KEY,
       ty_symbols TYPE STANDARD TABLE OF itcst WITH DEFAULT KEY.
+    METHODS sapscript_to_markdown_old
+      IMPORTING
+                i_lines       TYPE t_td_line
+      RETURNING VALUE(r_text) TYPE zabap2md_text.
     METHODS sapscript_to_markdown
       IMPORTING
-                i_lines       TYPE ty_pline
+                i_lines       TYPE t_td_line
       RETURNING VALUE(r_text) TYPE zabap2md_text.
     DATA:
       m_name        TYPE ddobjname,
@@ -78,7 +82,7 @@ CLASS zcl_abap2md_table_info IMPLEMENTATION.
   ENDMETHOD.
 
 
-  METHOD sapscript_to_markdown.
+  METHOD sapscript_to_markdown_old.
 **/
 * - remove all the empty sections in the document
 * - replace all the symbols in the lines
@@ -241,7 +245,7 @@ CLASS zcl_abap2md_table_info IMPLEMENTATION.
         OTHERS = 3.
 
     IF sy-subrc = 0 AND pline IS NOT INITIAL.
-      cur_table->text = sapscript_to_markdown( pline ).
+      cur_table->text = sapscript_to_markdown( CONV #( pline ) ).
     ENDIF.
 
     LOOP AT m_fields REFERENCE INTO DATA(fld) WHERE depth = 0 AND fieldname <> '.INCLUDE'.
@@ -266,4 +270,13 @@ CLASS zcl_abap2md_table_info IMPLEMENTATION.
   METHOD zif_abap2md_info~read_main.
 
   ENDMETHOD.
+
+
+  METHOD sapscript_to_markdown.
+    DATA(cvt) = NEW zcl_abap2md_sapscript_txt( ).
+    cvt->add_text( i_lines ).
+    r_text = cvt->get_markdown( ).
+
+  ENDMETHOD.
+
 ENDCLASS.

@@ -7,6 +7,7 @@ CLASS ltcl_main DEFINITION FINAL FOR TESTING
     METHODS:
       parse FOR TESTING RAISING cx_static_check,
       parse_alternative FOR TESTING RAISING cx_static_check,
+      escapes FOR TESTING RAISING cx_static_check,
       setup.
 ENDCLASS.
 
@@ -16,7 +17,7 @@ CLASS ltcl_main IMPLEMENTATION.
     code = VALUE stringtab(
                     ( `**/` )
                     ( `* @page page1 A documentation page` )
-                    ( `*@tableofcontents` )
+                    ( `*@@tableofcontents` )
                     ( |*| )
                     ( `* Leading text.` )
                     ( `*@section sec An example section` )
@@ -53,7 +54,8 @@ CLASS ltcl_main IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = 'A' line = 1 ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = 'documentation' line = 1 ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = 'page' line = 1 ) act = cut->next_token( ) ).
-    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'CMD' value = 'tableofcontents' line = 2 ) act = cut->next_token( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'CMD' value = '@' line = 2 ) act = cut->next_token( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = 'tableofcontents' line = 2 ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'PARSEP' line = 3 ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = 'Leading' line = 4 ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = 'text' line = 4 ) act = cut->next_token( ) ).
@@ -161,5 +163,20 @@ CLASS ltcl_main IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( ) act = cut->next_token( ) ).
     cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( ) act = cut->next_token( ) ).
   ENDMETHOD.
+
+  METHOD escapes.
+    DATA ss TYPE stringtab.
+    ss = VALUE #(     ( `**/` )
+                      ( `* @@cmd  test` )
+                       ).
+    DATA(cut) = CAST zif_abap2md_parser( NEW zcl_abap2md_tag_def_parser( NEW zcl_abap2md_comment_parser( ss ) ) ).
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'START' line = 1 )           act = cut->next_token( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'CMD' value = '@' line = 1 ) act = cut->next_token( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = 'cmd' line = 1 ) act = cut->next_token( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = VALUE zabap2md_token( type = 'WORD' value = 'test' line = 1 ) act = cut->next_token( ) ).
+
+  ENDMETHOD.
+
+
 
 ENDCLASS.
