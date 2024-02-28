@@ -118,32 +118,8 @@ CLASS zcl_abap2md_program_info IMPLEMENTATION.
 
 
   METHOD parse_docu.
-    DATA: lv_tag_value TYPE string.
+    ASSERT 1 = 0.
 
-    DATA(tokens) = CAST zif_abap2md_parser( NEW zcl_abap2md_tag_def_parser( i_text = i_text ) ).
-    DO.
-      DATA(chunk) = tokens->next_chunk( ).
-      IF chunk IS INITIAL.
-        EXIT.
-      ENDIF.
-
-      CASE to_upper( chunk[ 1 ] ).
-
-*     Returning docu
-
-*     Parameter docu
-        WHEN '@PARAM'.
-          chunk = tokens->next_chunk( ).
-          lv_tag_value = to_upper( extract_word( CHANGING text = chunk ) ).
-          DATA(lr_param) = find_param( lv_tag_value ).
-          APPEND LINES OF chunk TO lr_param->text.
-        WHEN '@@C'.
-          EXIT.
-
-        WHEN OTHERS.
-          APPEND LINES OF chunk TO mr_info->text.
-      ENDCASE.
-    ENDDO.
   ENDMETHOD.
 
 

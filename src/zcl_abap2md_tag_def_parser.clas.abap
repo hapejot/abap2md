@@ -45,8 +45,8 @@ CLASS zcl_abap2md_tag_def_parser IMPLEMENTATION.
 
 
   METHOD zif_abap2md_parser~next_chunk.
+    ASSERT 1 = 0. " ensure error if used. This stuff is outdated.
     DATA out TYPE REF TO string.
-
 
     " we have pairs to work on, so we return those otherwise
     " we extract the pairs form *mt_chunk*
@@ -136,13 +136,13 @@ CLASS zcl_abap2md_tag_def_parser IMPLEMENTATION.
     DATA: rules TYPE stringtab,
           token TYPE zabap2md_token,
           lines TYPE stringtab.
-    rules = VALUE #(    ( |^(```[\{][.][a-zA-Z]+)| )                        " F
-                        ( `^ *([0-9]{1,4}[.-][0-9]{1,2}[.-][0-9]{1,4})` )   " A
-                        ( `@([a-zA-Z0-9]+) *` )                             " B
-                        ( `(@@)` )                                          " G
-                        ( `([.,;:/])` )                                     " C
-                        ( `([^ .,;:/@]+) *` )                               " D regular words
-                        ( `^( *)$` )                                        " E
+    rules = VALUE #(    ( |^(```[\{][.][a-zA-Z]+)|                        ) " F
+                        ( `^ *([0-9]{1,4}[.-][0-9]{1,2}[.-][0-9]{1,4})`   ) " A
+                        ( `@([a-zA-Z0-9]+) *`                             ) " B
+                        ( `(@@)`                                          ) " G
+                        ( `( *[.,;:/] *)`                                 ) " C
+                        ( ` *([^ .,;:/@]+)`                               ) " D regular words
+                        ( `^( *)$`                                        ) " E
                         ).
     IF m_regex IS INITIAL.
       CONCATENATE LINES OF rules INTO DATA(pattern) SEPARATED BY '|'.
@@ -220,7 +220,4 @@ CLASS zcl_abap2md_tag_def_parser IMPLEMENTATION.
       CLEAR m_pushed.
     ENDIF.
   ENDMETHOD.
-
-
-
 ENDCLASS.

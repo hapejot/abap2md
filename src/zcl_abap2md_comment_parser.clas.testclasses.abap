@@ -40,10 +40,7 @@ CLASS ltcl_parse_comment_multi IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD parse_comments.
-    DATA(cut) = CAST zif_abap2md_parser( NEW zcl_abap2md_comment_parser( mv_code ) ).
-    cl_abap_unit_assert=>assert_equals( exp = 11 act = lines( cut->next_chunk( ) ) ).
-    cl_abap_unit_assert=>assert_equals( exp = 2  act = lines( cut->next_chunk( ) ) ) .
-    cl_abap_unit_assert=>assert_initial( act = cut->next_chunk( ) ).
+
   ENDMETHOD.
 
   METHOD parse_comments_v2.

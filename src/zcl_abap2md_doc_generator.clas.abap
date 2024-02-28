@@ -392,60 +392,7 @@ CLASS zcl_abap2md_doc_generator IMPLEMENTATION.
 
 
   METHOD parse_v1.
-
-    DATA: name TYPE string.
-    DATA(source) = CAST zif_abap2md_parser( NEW zcl_abap2md_tag_def_parser( NEW zcl_abap2md_comment_parser( i_code ) ) ).
-    DO.
-      DATA(chunk) = source->next_chunk( ).
-      IF chunk IS INITIAL.
-        EXIT.
-      ENDIF.
-      CASE chunk[ 1 ].
-        WHEN '@page'.
-          chunk = source->next_chunk( ).
-          name = first_word( CHANGING c_chunk = chunk ).
-          mr_current_page = REF #( doc-pages[ name = name ] OPTIONAL ).
-          DATA(title) = VALUE #( chunk[ 1 ] OPTIONAL ).
-          IF mr_current_page IS INITIAL.
-            APPEND VALUE #( name = name ) TO doc-pages REFERENCE INTO mr_current_page.
-            mr_current_page->title = title.
-          ELSE.
-            IF mr_current_page->title IS INITIAL OR mr_current_page->title = mr_current_page->name.
-              mr_current_page->title = title.
-            ENDIF.
-          ENDIF.
-          DELETE chunk INDEX 1.
-
-          mr_current_text = REF #( mr_current_page->text ).
-          APPEND LINES OF chunk TO mr_current_text->*.
-          CLEAR mr_current_section.
-        WHEN '@section'.
-          chunk = source->next_chunk( ).
-          name = first_word( CHANGING c_chunk = chunk ).
-          ASSERT mr_current_page IS BOUND.
-          APPEND VALUE #( name = name ) TO mr_current_page->sections REFERENCE INTO mr_current_section.
-          mr_current_text = REF #( mr_current_section->text ).
-          mr_current_section->title = chunk[ 1 ].
-          DELETE chunk INDEX 1.
-          APPEND LINES OF chunk TO mr_current_text->*.
-        WHEN '@subsection'.
-          chunk = source->next_chunk( ).
-          name = first_word( CHANGING c_chunk = chunk ).
-          ASSERT mr_current_section IS BOUND.
-          APPEND VALUE #( name = name ) TO mr_current_section->subsections REFERENCE INTO DATA(lr_subsection).
-          lr_subsection->title = chunk[ 1 ].
-          DELETE chunk INDEX 1.
-          mr_current_text = REF #( lr_subsection->text ).
-          APPEND LINES OF chunk TO mr_current_text->*.
-        WHEN '@@c'. " end of comment chunk is automatically end of pages and sections.
-          CLEAR mr_current_page.
-          CLEAR mr_current_section.
-          mr_current_text = mr_main_text.
-        WHEN OTHERS.
-          APPEND LINES OF chunk TO mr_current_text->*.
-      ENDCASE.
-    ENDDO.
-
+    ASSERT 1 = 0.
 
   ENDMETHOD.
 

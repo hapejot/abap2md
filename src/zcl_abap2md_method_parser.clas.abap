@@ -58,7 +58,7 @@ CLASS zcl_abap2md_method_parser IMPLEMENTATION.
     IF current_method IS INITIAL.
       APPEND VALUE #( name = i_method ) TO current_class->methods REFERENCE INTO current_method.
     ENDIF.
-    current_text = REF #( current_method->text ).
+    current_text = NEW zcl_abap2md_text_lines( REF #( current_method->text ) ).
 
   ENDMETHOD.
 
@@ -66,7 +66,7 @@ CLASS zcl_abap2md_method_parser IMPLEMENTATION.
 
   METHOD handle_date.
     APPEND VALUE #( date = token-value ) TO current_method->changes REFERENCE INTO DATA(current_change).
-    current_text = REF #( current_change->text ).
+    current_text = NEW zcl_abap2md_text_lines( REF #( current_change->text ) ).
     next_token( ).
   ENDMETHOD.
 

@@ -16,7 +16,7 @@ CLASS zcl_abap2md_doc_parser DEFINITION
           current_page    TYPE REF TO zabap2md_page,
           current_section TYPE REF TO zabap2md_section,
           subsection      TYPE REF TO zabap2md_subsection,
-          current_text    TYPE REF TO zabap2md_text.
+          current_text    TYPE REF TO zcl_abap2md_text_lines.
     METHODS next_token.
     METHODS require_current_text.
     METHODS read_words_in_line
@@ -32,9 +32,6 @@ CLASS zcl_abap2md_doc_parser DEFINITION
     METHODS handle_start.
     METHODS handle_date.
   PRIVATE SECTION.
-    METHODS add_string
-      IMPORTING
-        i_string TYPE any OPTIONAL.
 
 ENDCLASS.
 
@@ -104,20 +101,7 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
 
     next_token( ).
     require_current_text( ).
-    APPEND || TO current_text->*.
-
-
-  ENDMETHOD.
-
-  METHOD add_string.
-**/
-* adding a given string at the current position of the current text.
-*/
-    require_current_text( ).
-    DATA(idx) = lines( current_text->* ).
-    IF idx > 0.
-      current_text->*[ idx ] = current_text->*[ idx ] && i_string.
-    ENDIF.
+    current_text->new_paragraph( ).
 
   ENDMETHOD.
 
@@ -125,20 +109,17 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
   METHOD handle_sep.
 
     require_current_text( ).
-    DATA(idx) = lines( current_text->* ).
-    IF idx > 0.
-      current_text->*[ idx ] = current_text->*[ idx ] && token-value.
-*      next_token( ).
-    ENDIF.
-    APPEND read_words_in_line( ) TO current_text->*.
+    current_text->add_string( token-value ).
+    next_token( ).
 
   ENDMETHOD.
 
   METHOD handle_word.
 
     require_current_text( ).
-    APPEND read_words_in_line( ) TO current_text->*.
-
+*    APPEND read_words_in_line( ) TO current_text->*.
+    current_text->add_word( token-value ).
+    next_token( ).
 
   ENDMETHOD.
 
@@ -158,8 +139,8 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
     CASE token-value.
 
       WHEN '@'.
-        next_token( ).
-        add_string( | @{ token-value }|  ).
+        current_text->add_space( ).
+        current_text->add_string( `@` ).
         next_token( ).
 
       WHEN 'page'.
@@ -176,7 +157,7 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
         IF current_page->title IS INITIAL.
           current_page->title = title.
         ENDIF.
-        current_text = REF #( current_page->text ).
+        current_text = NEW zcl_abap2md_text_lines( i_txt =  REF #( current_page->text ) ).
 
       WHEN 'section'.
         token = source->next_token( ).
@@ -189,7 +170,7 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
           SORT current_page->sections BY name.
           current_section->title = read_words_in_line( line ).
         ENDIF.
-        current_text = REF #( current_section->text ).
+        current_text = NEW zcl_abap2md_text_lines( i_txt = REF #( current_section->text ) ).
 
       WHEN 'subsection'.
         token = source->next_token( ).
@@ -201,7 +182,7 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
           APPEND VALUE #( name = name ) TO current_section->subsections REFERENCE INTO subsection.
           subsection->title = read_words_in_line( line ).
         ENDIF.
-        current_text = REF #( subsection->text ).
+        current_text = NEW zcl_abap2md_text_lines( REF #( subsection->text ) ).
     ENDCASE.
 
 

@@ -71,59 +71,9 @@ CLASS ltcl_main IMPLEMENTATION.
         ( || )
         ( || )
         ( |**/| )
-        ( |* Description of the report itself.| )
-        ( |* @param obj is a select option defining a set of objects.| )
+        ( |* Description of the code itself.| )
         ( |*/| )
-        ( |REPORT zr_abap2md_main.| )
-        ( |DATA:| )
-        ( |  rc        TYPE i,| )
-        ( |  doc       TYPE stringtab,| )
-        ( |  path      TYPE zcl_abap2md_local_file=>t_dir,| )
-        ( |  files     TYPE filetable,| )
-        ( |  obj_names TYPE STANDARD TABLE OF zcl_abap2md_main=>obj_name,| )
-        ( |  obj_name  TYPE zcl_abap2md_main=>obj_name,| )
-        ( |  options   TYPE zabap2md_options.| )
-        ( |SELECT-OPTIONS:| )
-        ( |    s_objs FOR obj_name.| )
-        ( |PARAMETERS: p_path  TYPE zcl_abap2md_local_file=>t_dir DEFAULT 'abap-doc.md'.| )
-        ( || )
-        ( |AT SELECTION-SCREEN ON VALUE-REQUEST FOR p_path.| )
-        ( |  cl_gui_frontend_services=>file_open_dialog(| )
-        ( |    CHANGING| )
-        ( |      file_table              = files| )
-        ( |      rc                      = rc| )
-        ( |  ).| )
-        ( |  IF lines( files ) > 0.| )
-        ( |    p_path = files[ 1 ].| )
-        ( |  ENDIF.| )
-        ( || )
-        ( |START-OF-SELECTION.| )
-        ( || )
-        ( |  " first select possible candidates from TADIR| )
-        ( |  SELECT obj_name| )
-        ( |        FROM tadir| )
-        ( |        WHERE obj_name IN @s_objs| )
-        ( |        AND pgmid = 'R3TR'| )
-        ( |        AND object IN ( 'CLAS', 'PROG' )| )
-        ( |        INTO TABLE @obj_names.| )
-        ( || )
-        ( |  " next try the same with TFDIR| )
-        ( |  SELECT funcname| )
-        ( |        FROM tfdir| )
-        ( |        WHERE funcname IN @s_objs| )
-        ( |        APPENDING TABLE @obj_names.| )
-        ( || )
-        ( || )
-        ( |  CALL FUNCTION 'Z_ABAP2MD_GENERATE_MULTI'| )
-        ( |    EXPORTING| )
-        ( |      it_names   = obj_names| )
-        ( |      ix_options = options| )
-        ( |    IMPORTING| )
-        ( |      et_doc     = doc.| )
-        ( || )
-        ( |  DATA(file) = NEW zcl_abap2md_local_file( ).| )
-        ( |  file->add_text( doc ).| )
-        ( |  file->save( i_path = p_path ).| )
+
     ).
 
     DATA(cut) = zcl_abap2md_class_def_parser=>create(
@@ -133,9 +83,9 @@ CLASS ltcl_main IMPLEMENTATION.
             ).
     cut->parse( ).
     cl_abap_unit_assert=>assert_equals( exp = 2 act = lines( doc-pages ) ).
-    DATA(r) = REF #( doc-programs[ 1 ] ).
+    DATA(r) = REF #( doc-classes[ 1 ] ).
     DATA(d) = r->text[ 1 ].
-    cl_abap_unit_assert=>assert_equals( exp = 'Description of the report itself.' act = d ).
+    cl_abap_unit_assert=>assert_equals( exp = 'Description of the code itself.' act = d ).
   ENDMETHOD.
 
 
@@ -151,7 +101,7 @@ CLASS ltcl_main IMPLEMENTATION.
                 i_name = |{ prg }|
             ).
     cut->parse( ).
-    cl_abap_unit_assert=>assert_equals( exp = 2 act = lines( doc-pages ) ).
+    cl_abap_unit_assert=>assert_equals( exp = 5 act = lines( doc-pages ) ).
 
   ENDMETHOD.
 

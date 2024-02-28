@@ -11,14 +11,44 @@
 **/
 * @page 2 Reference
 *
-*    **@@page \<name\> (title)**
+* ABAP2MD allows for documenting details that are not directly related to
+* any development object. For example it is possible to explain the overall
+* architecture of a solution in a sepearate part of the documentation, since this explains
+* several development objects and their interactions or relationships. It would
+* be wrong to just put this explanation into the documentation of a single object.
 *
-*    Indicates that a comment block contains a piece of documentation that
-*    is not directly related to one specific class, file or member.
+* The way we use the documention here is still storing the explanation at some development
+* object. Typically a report that is very central to the development.
+* In order to bring the architecture descriptions into the front of the resulting
+* document one can use the *page*, *section*, and *subsection* commands.
 *
-*    Example:
+* The documentation tool finally assembles all pages with their sections into one
+* document. This way it is possible to add sections to one single page with comments
+* from different development objects.
 *
-*```
+* For example you are describing The general architecture, but you are adding some aspects
+* from different angels to it from individual ABAP-Classes that are written.
+*
+* Pages:
+* ABAP2MD organizes information into pages. Each page can contain multiple sections, each with its own title and content. Pages are created using the
+* @@page command followed by a unique name for the page, which acts as an identifier within your documentation. You can then add content to this page using
+* the @@section command, which allows you to create named sections on that page.
+*
+* Sections:
+* Sections in ABAP2MD are used to organize information within a page. Each section is identified by a unique name and consists of content between the
+* corresponding @@section and @@subsection commands. You can nest subsections within sections to create a hierarchical structure for your documentation.
+* Sections are useful for grouping related information together, making it easier for users to find relevant details.
+*
+* ```
+*    @@page *name* (title)
+* ```
+*
+* Indicates that a comment block contains a piece of documentation that
+* is not directly related to one specific class, file or member.
+*
+* Example:
+*
+* ```
 *    **/
 *    * @page page1 A documentation page
 *    *
@@ -36,11 +66,31 @@
 *    * @page page2 Another page
 *    *  Even more info.
 *    */
-*```
+* ```
 *
 *    Note:
 *
 *    The <name> argument consists of a combination of letters and number digits.
+*
+*
+* All commands in the documentation start with an at-sign (@).
+*
+* Some commands have one or more arguments. Each argument has a certain range:
+*
+* If <sharp> braces are used the argument is a single word.
+*
+* If (round) braces are used the argument extends until the end of the line on
+*  which the command was found.
+*
+* If {curly} braces are used the argument extends until the next paragraph.
+* Paragraphs are delimited by a blank line or by a section indicator. Note that
+* {curly} braces are also used for command options, here the braces are mandatory
+* and just 'normal' characters. The starting curly brace has to directly follow the
+* command, so without whitespace.
+*
+* If in addition to the above argument specifiers [square] brackets are used the
+* argument is optional, unless they are placed between quotes in that case they are
+* a mandatory part of the command argument.
 *
 */
 
@@ -136,7 +186,7 @@ CLASS lcl_app IMPLEMENTATION.
 
   METHOD at_sel_scr_out.
     DATA: values   TYPE vrm_values.
-    SELECT * FROM zabap2md_docelem
+    SELECT * FROM zabap2md_docelem "#EC CI_NOWHERE
           INTO TABLE @elements.
     CLEAR values.
     LOOP AT elements INTO DATA(x) GROUP BY x-docset.

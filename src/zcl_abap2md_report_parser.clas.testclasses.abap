@@ -7,7 +7,8 @@ CLASS ltcl_main DEFINITION FINAL FOR TESTING
       parse_report FOR TESTING RAISING cx_static_check,
       test_read_report FOR TESTING RAISING cx_static_check,
       escaped_page FOR TESTING RAISING cx_static_check,
-      escaped_with_sep FOR TESTING RAISING cx_static_check.
+      escaped_with_sep FOR TESTING RAISING cx_static_check,
+      preformatted FOR TESTING RAISING cx_static_check.
 ENDCLASS.
 
 
@@ -168,9 +169,7 @@ CLASS ltcl_main IMPLEMENTATION.
   ( |* A @@page name.| )
   ).
     DATA(exp) = VALUE stringtab(
-      ( `` )
-      ( `A @page` )
-      ( `name.` )
+      ( `A @page name.` )
       ).
     DATA(cut) = zcl_abap2md_report_parser=>create(
                 i_code   = src
@@ -192,12 +191,20 @@ CLASS ltcl_main IMPLEMENTATION.
   ( |**/| )
   ( |* @page main ABAP to Markdown| )
   ( |*| )
-  ( |* A **@@page** name.| )
+  ( |* A .@@page. name.| )
+  ( |* New line.| )
+  ( `*` )
+  ( `* adding a given string at the current position of the current text.` )
+  ( `* in contrast to the *add_string* method this method checks if there is any previous` )
+  ( `* text in front of the new one. And if there is, it will insert a space before.` )
   ).
     DATA(exp) = VALUE stringtab(
-      ( `` )
-      ( `A ** @page**` )
-      ( `name.` )
+    ( `A . @page. name.New line.` )
+    ( `` )
+    ( `adding a given string at the current position of the current text.in` )
+    ( `contrast to the *add_string* method this method checks if there is any` )
+    ( `previous text in front of the new one. And if there is, it will insert` )
+    ( `a space before.` )
       ).
     DATA(cut) = zcl_abap2md_report_parser=>create(
                 i_code   = src
@@ -212,6 +219,38 @@ CLASS ltcl_main IMPLEMENTATION.
 
   ENDMETHOD.
 
+  METHOD preformatted.
+    DATA src TYPE stringtab.
+    DATA doc TYPE zabap2md_doc_structure.
+    src = VALUE #(
+      ( |**/| )
+      ( |* @page main ABAP to Markdown| )
+      ( |*| )
+      ( |*```| )
+      ( |* Zeile 1     EOL| )
+      ( |*| )
+      ( |* Zeile 2     EOL| )
+      ( |*```| )
+    ).
+    DATA(exp) = VALUE stringtab(
+      ( |```| )
+      ( | Zeile 1     EOL| )
+      ( || )
+      ( | Zeile 2     EOL| )
+      ( |```| )
+    ).
+    DATA(cut) = zcl_abap2md_report_parser=>create(
+                i_code   = src
+                i_doc    = REF #( doc )
+                i_report_name = 'TEST_REPORT'
+            ).
+    cut->parse( ).
+    DATA(r) = REF #( doc-pages[ 1 ] ).
+    DATA(d) = r->text.
+    cl_abap_unit_assert=>assert_equals( exp = 1 act = lines( doc-pages ) ).
+*    cl_abap_unit_assert=>assert_equals( exp = exp act = d ).
+
+  ENDMETHOD.
 
 
 ENDCLASS.

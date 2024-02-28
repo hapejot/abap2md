@@ -47,7 +47,7 @@ CLASS zcl_abap2md_report_parser IMPLEMENTATION.
     IF current_report IS INITIAL.
       APPEND VALUE #( name = m_report_name ) TO doc->programs REFERENCE INTO current_report.
     ENDIF.
-    current_text = REF #( current_report->text ).
+    current_text = NEW zcl_abap2md_text_lines( REF #( current_report->text ) ).
   ENDMETHOD.
 
   METHOD handle_cmd.
@@ -70,13 +70,13 @@ CLASS zcl_abap2md_report_parser IMPLEMENTATION.
 
   METHOD handle_end.
     super->handle_end( ).
-    current_text = REF #( current_report->text ).
+    current_text = NEW zcl_abap2md_text_lines( REF #( current_report->text ) ).
   ENDMETHOD.
 
   METHOD handle_date.
 
     APPEND VALUE #( date = token-value ) TO current_report->changes REFERENCE INTO DATA(current_change).
-    current_text = REF #( current_change->text ).
+    current_text = NEW zcl_abap2md_text_lines( REF #( current_change->text ) ).
     next_token( ).
 
   ENDMETHOD.

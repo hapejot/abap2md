@@ -21,6 +21,7 @@ CLASS ltcl_main IMPLEMENTATION.
     cut->set_fields( VALUE #( ( name = `NAME` ) ( name = `TEXT` ) ) ).
     DATA text TYPE stringtab.
     text = VALUE #(
+    ( `` )
     ( `------------` )
     ( `NAME TEXT   ` )
     ( `---- -------` )
@@ -30,6 +31,7 @@ CLASS ltcl_main IMPLEMENTATION.
     ( `F2   Line 1 ` )
     ( `     Line 2 ` )
     ( `------------` )
+    ( `` )
     ).
 
     cl_abap_unit_assert=>assert_equals( msg = 'md' exp = text act = cut->get_markdown( ) ).
@@ -39,6 +41,7 @@ CLASS ltcl_main IMPLEMENTATION.
     cut->set_fields( VALUE #( ( name = `NAME` title = `Name` ) ( name = `TEXT` title = 'Description' ) ) ).
     DATA text TYPE stringtab.
     text = VALUE #(
+    ( `` )
     ( `----------------` )
     ( `Name Description` )
     ( `---- -----------` )
@@ -48,6 +51,7 @@ CLASS ltcl_main IMPLEMENTATION.
     ( `F2   Line 1     ` )
     ( `     Line 2     ` )
     ( `----------------` )
+    ( `` )
     ).
 
     cl_abap_unit_assert=>assert_equals( msg = 'md' exp = text act = cut->get_markdown( ) ).
@@ -56,14 +60,14 @@ CLASS ltcl_main IMPLEMENTATION.
   METHOD pipe_separator.
     DATA text TYPE stringtab.
     text = VALUE #(
-    ( `|----|-------|---------|` )
+    ( `` )
     ( `|NAME|TEXT   |DIRECTION|` )
     ( `|----|-------|---------|` )
     ( `|F1  |Zeile 1|I        |` )
     ( `|    |Zeile 2|         |` )
     ( `|F2  |Line 1 |O        |` )
     ( `|    |Line 2 |         |` )
-    ( `|----|-------|---------|` )
+    ( `` )
     ).
     cut->use_pipe_separator( ).
     cl_abap_unit_assert=>assert_equals( msg = 'md'
@@ -93,6 +97,7 @@ CLASS ltcl_main IMPLEMENTATION.
 
     DATA text TYPE stringtab.
     text = VALUE #(
+    ( `` )
     ( `----------------------` )
     ( `NAME TEXT    DIRECTION` )
     ( `---- ------- ---------` )
@@ -102,9 +107,12 @@ CLASS ltcl_main IMPLEMENTATION.
     ( `F2   Line 1  O        ` )
     ( `     Line 2           ` )
     ( `----------------------` )
+    ( `` )
     ).
 
-    cl_abap_unit_assert=>assert_equals( msg = 'md' exp = text act = cut->get_markdown( ) ).
+    cl_abap_unit_assert=>assert_equals( msg = 'md'
+                                        exp = text
+                                        act = cut->get_markdown( ) ).
 
 
   ENDMETHOD.

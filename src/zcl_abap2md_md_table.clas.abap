@@ -146,14 +146,11 @@ CLASS zcl_abap2md_md_table IMPLEMENTATION.
 
   METHOD get_markdown.
 **/
-*generates markdown from the table that has been loaded.
-*this markdown first removes all the fields that are empty
-*for all rows or otherwise if a field list is given uses the field
-*list.
+* Generates markdown from the table that has been loaded.
 *
-*Then width of the columns are arranged so that the titles fit as well.
-*
-*At last the lines are generated.
+* This method first removes all the fields that are empty, then generates
+* Markdown for each row or otherwise if a field list is given uses the field
+* list. The width of the columns are arranged so that the titles fit as well.
 */
 
 
@@ -181,7 +178,7 @@ CLASS zcl_abap2md_md_table IMPLEMENTATION.
       IF fld_ref IS BOUND AND fld_ref->title IS NOT INITIAL.
         n = strlen( fld_ref->title ).
       ENDIF.
-      IF fld_ref->style = 'CODE'.
+      IF fld_ref IS BOUND AND fld_ref->style = 'CODE'.
         n = col_ref->width + 2.
       ENDIF.
       IF n > col_ref->width.
@@ -194,6 +191,9 @@ CLASS zcl_abap2md_md_table IMPLEMENTATION.
         e_rows = row_count
         e_cols = col_count
     ).
+
+    """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+    " begin output to r_result
 
     DATA line TYPE string.
     DATA sep TYPE string.
@@ -287,7 +287,7 @@ CLASS zcl_abap2md_md_table IMPLEMENTATION.
                              ).
 
         DATA(txt) = c->get_line(  i_idx = line_idx ).
-        IF fields[ name = col-name ]-style = 'CODE'.
+        IF VALUE #( fields[ name = col-name ]-style OPTIONAL ) = 'CODE'.
           txt = |`{ txt }`|.
         ENDIF.
         line = |{ line }{ sep }{ txt WIDTH = col-width }|.

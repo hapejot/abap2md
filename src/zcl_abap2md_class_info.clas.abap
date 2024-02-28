@@ -71,7 +71,7 @@ ENDCLASS.
 
 
 
-CLASS ZCL_ABAP2MD_CLASS_INFO IMPLEMENTATION.
+CLASS zcl_abap2md_class_info IMPLEMENTATION.
 
 
   METHOD build_class_info.
@@ -313,83 +313,12 @@ CLASS ZCL_ABAP2MD_CLASS_INFO IMPLEMENTATION.
 
   METHOD parse_method_docu.
 **/
-* This method parses the comments using doxygen like tags.
+* Obsolete. This method parses the comments using doxygen like tags.
 *
 * @param CS_METHOD_INFO   Method info structure
 *
 */
-
-
-    DATA ls_parameter_info              TYPE zabap2md_param.
-    DATA ls_exception_info              TYPE zabap2md_common_info.
-    DATA lv_tag_value                   TYPE name_komp.
-    FIELD-SYMBOLS <fs_parameter_info>     TYPE zabap2md_param.
-    FIELD-SYMBOLS <fs_exception_info>     TYPE zabap2md_common_info.
-    FIELD-SYMBOLS <ft_description>  TYPE rswsourcet.
-
-    DATA(tokens) = CAST zif_abap2md_parser( NEW zcl_abap2md_tag_def_parser( NEW zcl_abap2md_comment_parser( cs_method_info-text ) ) ).
-
-    CLEAR cs_method_info-text[].
-
-* Scan for tags
-    DO.
-
-      DATA(chunk) = tokens->next_chunk( ).
-      IF chunk IS INITIAL.
-        EXIT.
-      ENDIF.
-
-*   Find tag info entry
-      UNASSIGN: <fs_parameter_info>, <fs_exception_info>, <ft_description>.
-
-      CASE to_upper( chunk[ 1 ] ).
-
-*     Returning docu
-        WHEN '@RETURN'.
-          cs_method_info-returns-text = tokens->next_chunk( ).
-
-*     Parameter docu
-        WHEN '@PARAM'.
-          chunk = tokens->next_chunk( ).
-          lv_tag_value = to_upper( extract_word( CHANGING text = chunk ) ).
-*       Get parameter info
-          READ TABLE cs_method_info-params ASSIGNING <fs_parameter_info>
-                WITH KEY name = lv_tag_value.
-          IF sy-subrc IS NOT INITIAL.
-            CLEAR ls_parameter_info.
-            ls_parameter_info-name = lv_tag_value.
-            ls_parameter_info-direction      = 'UNKNOWN'.
-            APPEND ls_parameter_info TO cs_method_info-params ASSIGNING <fs_parameter_info>.
-*            add_message_symsg( ).
-          ENDIF.
-
-          <fs_parameter_info>-text = chunk.
-
-*     Exception docu
-        WHEN '@EXCEPTION' OR '@THROWS' OR '@RAISING'.
-          chunk = tokens->next_chunk( ).
-          lv_tag_value = to_upper( extract_word( CHANGING text = chunk ) ).
-
-          READ TABLE cs_method_info-exceptions ASSIGNING <fs_exception_info>
-                    WITH KEY name = lv_tag_value.
-
-          IF sy-subrc IS NOT INITIAL.
-            CLEAR ls_exception_info.
-            ls_exception_info-name = lv_tag_value.
-            APPEND ls_exception_info TO cs_method_info-exceptions ASSIGNING <fs_exception_info>.
-*            add_message_symsg( ).
-          ENDIF.
-
-          <fs_exception_info>-text = chunk.
-
-        WHEN OTHERS.
-          IF cs_method_info-text IS INITIAL.
-            cs_method_info-text = chunk.
-          ENDIF.
-      ENDCASE.
-
-    ENDDO.
-
+    ASSERT 1 = 0.
 
   ENDMETHOD.
 

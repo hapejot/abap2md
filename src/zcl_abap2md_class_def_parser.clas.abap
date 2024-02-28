@@ -45,7 +45,7 @@ CLASS zcl_abap2md_class_def_parser IMPLEMENTATION.
     IF current_info IS INITIAL.
       APPEND VALUE #( name = m_name ) TO doc->classes REFERENCE INTO current_info.
     ENDIF.
-    current_text = REF #( current_info->text ).
+    current_text = new zcl_abap2md_text_lines( REF #( current_info->text ) ).
   ENDMETHOD.
 
   METHOD handle_cmd.
@@ -58,13 +58,13 @@ CLASS zcl_abap2md_class_def_parser IMPLEMENTATION.
 
   METHOD handle_end.
     super->handle_end( ).
-    current_text = REF #( current_info->text ).
+    current_text = new zcl_abap2md_text_lines( REF #( current_info->text ) ).
   ENDMETHOD.
 
   METHOD handle_date.
 
     APPEND VALUE #( date = token-value ) TO current_info->changes REFERENCE INTO DATA(current_change).
-    current_text = REF #( current_change->text ).
+    current_text = new zcl_abap2md_text_lines( REF #( current_change->text ) ).
     next_token( ).
 
   ENDMETHOD.
