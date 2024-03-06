@@ -193,7 +193,6 @@ CLASS zcl_abap2md_dependencies IMPLEMENTATION.
       ref          TYPE scr_glref,
       all_result   TYPE scr_refs,
       all_errors   TYPE rsyntmsgs,
-      compl_refs   TYPE cl_abap_compiler=>t_all_refs,
       compl_error  TYPE sychar01,
       compl_errors TYPE scr_errors,
       compl_abort  TYPE sychar01,
@@ -210,7 +209,6 @@ CLASS zcl_abap2md_dependencies IMPLEMENTATION.
     comp->get_all_refs(
       EXPORTING
         p_local       = 'X'                 " Local classes too
-*        p_extended    = 'X'                 " will populate symbols, this causes an exception in some classes
         p_types       = interesting_tags
       IMPORTING
         p_result      = result
