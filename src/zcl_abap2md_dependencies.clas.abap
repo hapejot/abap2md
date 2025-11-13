@@ -34,101 +34,11 @@ ENDCLASS.
 
 
 
-CLASS zcl_abap2md_dependencies IMPLEMENTATION.
+CLASS ZCL_ABAP2MD_DEPENDENCIES IMPLEMENTATION.
 
 
   METHOD constructor.
     setup_tags( ).
-  ENDMETHOD.
-
-
-  METHOD get_classes.
-    DATA obj TYPE REF TO cl_abap_comp_class.
-    LOOP AT mt_refs INTO DATA(l_ref) WHERE tag = 'TY'.
-      TRY.
-          DATA: type_name(100) TYPE c.
-          type_name = l_ref-full_name+4.
-          CALL METHOD cl_abap_typedescr=>describe_by_name
-            EXPORTING
-              p_name         = type_name    " Type name
-            RECEIVING
-              p_descr_ref    = DATA(xref)
-            EXCEPTIONS
-              type_not_found = 1
-              OTHERS         = 2.
-          CHECK sy-subrc = 0.
-          CHECK xref->kind = cl_abap_typedescr=>kind_class.
-
-          DATA(name) = l_ref-full_name+4.
-          IF NOT name CA '\'.
-            SELECT * FROM vseoclass
-                    WHERE clsname = @name
-                    INTO TABLE @DATA(lt_classes).
-            DATA(title) = VALUE #( lt_classes[ langu = sy-langu ]-descript OPTIONAL ).
-            IF title IS INITIAL.
-              title = VALUE #( lt_classes[ 1 ]-descript OPTIONAL ).
-            ENDIF.
-          ENDIF.
-          APPEND VALUE zabap2md_dependency(
-                          kind  = 'TY-CLASS'
-                          name  = name
-                          title = title
-                      ) TO r_result.
-        CATCH cx_sy_move_cast_error.
-          " ignore it.
-      ENDTRY.
-    ENDLOOP.
-
-  ENDMETHOD.
-
-
-  METHOD get_functions.
-    LOOP AT mt_refs INTO DATA(l_ref)
-            WHERE tag = 'FU' " function references local as well as remote. Variable calls are not recognized.
-            AND grade > 0.   " the function itself has grade = 0, this should be skipped.
-
-      DATA(name) = l_ref-full_name+4.
-      SELECT * FROM tftit
-              WHERE funcname = @name
-              INTO TABLE @DATA(lt_titles).
-      DATA(title) = VALUE #( lt_titles[ spras = sy-langu ]-stext OPTIONAL ).
-      IF title IS INITIAL.
-        title = VALUE #( lt_titles[ 1 ]-stext OPTIONAL ).
-      ENDIF.
-      APPEND VALUE zabap2md_dependency(
-                      kind  =  'FU-SYMBOL'
-                      name  = name
-                      title = title
-                  ) TO r_result.
-    ENDLOOP.
-  ENDMETHOD.
-
-
-  METHOD get_kind.
-
-    DATA(clsname) = cl_abap_classdescr=>get_class_name( i_ref-symbol ).
-    r_kind  = |{ i_ref-tag }-{ clsname+20 }|.
-
-
-  ENDMETHOD.
-
-
-  METHOD get_messages.
-
-    LOOP AT mt_refs INTO DATA(l_ref) WHERE tag = 'MN'.
-
-
-      SPLIT l_ref-full_name AT '\' INTO DATA(msgid) DATA(msgno).
-      msgno = msgno+3.
-      MESSAGE ID msgid TYPE 'S' NUMBER msgno
-            WITH '&1' '&2' '&3' '&4'
-            INTO DATA(lv_msg).
-      APPEND VALUE zabap2md_dependency(
-                      kind  =  'MN-SYMBOL'
-                      name  = |{ msgid }-{ msgno }|
-                      title = lv_msg
-                  ) TO r_result.
-    ENDLOOP.
   ENDMETHOD.
 
 
@@ -177,6 +87,74 @@ CLASS zcl_abap2md_dependencies IMPLEMENTATION.
   ENDMETHOD.
 
 
+  METHOD get_classes.
+    DATA obj TYPE REF TO cl_abap_comp_class.
+    LOOP AT mt_refs INTO DATA(l_ref) WHERE tag = 'TY'.
+      TRY.
+          DATA: type_name(100) TYPE c.
+          type_name = l_ref-full_name+4.
+          CALL METHOD cl_abap_typedescr=>describe_by_name
+            EXPORTING
+              p_name         = type_name    " Type name
+            RECEIVING
+              p_descr_ref    = DATA(xref)
+            EXCEPTIONS
+              type_not_found = 1
+              OTHERS         = 2.
+          CHECK sy-subrc = 0.
+          CHECK xref->kind = cl_abap_typedescr=>kind_class.
+
+          DATA(name) = l_ref-full_name+4.
+          IF NOT name CA '\'.
+            SELECT * FROM vseoclass
+                    WHERE clsname = @name
+                    INTO TABLE @DATA(lt_classes).
+            DATA(title) = VALUE #( lt_classes[ langu = sy-langu ]-descript OPTIONAL ).
+            IF title IS INITIAL.
+              title = VALUE #( lt_classes[ 1 ]-descript OPTIONAL ).
+            ENDIF.
+          ENDIF.
+          APPEND VALUE zabap2md_dependency(
+                          kind  = 'TY-CLASS'
+                          name  = name
+                          title = title
+                      ) TO r_result.
+        CATCH cx_sy_move_cast_error.
+          " ignore it.
+      ENDTRY.
+    ENDLOOP.
+
+  ENDMETHOD.
+
+
+  METHOD get_messages.
+
+    LOOP AT mt_refs INTO DATA(l_ref) WHERE tag = 'MN'.
+
+
+      SPLIT l_ref-full_name AT '\' INTO DATA(msgid) DATA(msgno).
+      msgno = msgno+3.
+      MESSAGE ID msgid TYPE 'S' NUMBER msgno
+            WITH '&1' '&2' '&3' '&4'
+            INTO DATA(lv_msg).
+      APPEND VALUE zabap2md_dependency(
+                      kind  =  'MN-SYMBOL'
+                      name  = |{ msgid }-{ msgno }|
+                      title = lv_msg
+                  ) TO r_result.
+    ENDLOOP.
+  ENDMETHOD.
+
+
+  METHOD get_kind.
+
+    DATA(clsname) = cl_abap_classdescr=>get_class_name( i_ref-symbol ).
+    r_kind  = |{ i_ref-tag }-{ clsname+20 }|.
+
+
+  ENDMETHOD.
+
+
   METHOD if_oo_adt_classrun~main.
     load_for( i_compile_unit = 'SAPLZPJL'
                 i_include = 'LZPJLU01' ).
@@ -209,6 +187,7 @@ CLASS zcl_abap2md_dependencies IMPLEMENTATION.
     comp->get_all_refs(
       EXPORTING
         p_local       = 'X'                 " Local classes too
+*        p_extended    = 'X'                 " will populate symbols, this causes an exception in some classes
         p_types       = interesting_tags
       IMPORTING
         p_result      = result
@@ -238,5 +217,27 @@ CLASS zcl_abap2md_dependencies IMPLEMENTATION.
                                 ( low = 'MN' ) ).
 
 
+  ENDMETHOD.
+
+
+  METHOD get_functions.
+    LOOP AT mt_refs INTO DATA(l_ref)
+            WHERE tag = 'FU' " function references local as well as remote. Variable calls are not recognized.
+            AND grade > 0.   " the function itself has grade = 0, this should be skipped.
+
+      DATA(name) = l_ref-full_name+4.
+      SELECT * FROM tftit
+              WHERE funcname = @name
+              INTO TABLE @DATA(lt_titles).
+      DATA(title) = VALUE #( lt_titles[ spras = sy-langu ]-stext OPTIONAL ).
+      IF title IS INITIAL.
+        title = VALUE #( lt_titles[ 1 ]-stext OPTIONAL ).
+      ENDIF.
+      APPEND VALUE zabap2md_dependency(
+                      kind  =  'FU-SYMBOL'
+                      name  = name
+                      title = title
+                  ) TO r_result.
+    ENDLOOP.
   ENDMETHOD.
 ENDCLASS.
