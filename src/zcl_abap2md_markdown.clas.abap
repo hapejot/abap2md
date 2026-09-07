@@ -94,6 +94,7 @@ CLASS zcl_abap2md_markdown IMPLEMENTATION.
 
     APPEND INITIAL LINE TO mt_text.
     DATA(lo_type) = cl_abap_typedescr=>describe_by_data( iv_text ).
+    APPEND |```abap| TO mt_text.
     CASE lo_type->kind.
       WHEN cl_abap_typedescr=>kind_table.
         ASSIGN iv_text TO <lt_text>.
@@ -103,6 +104,7 @@ CLASS zcl_abap2md_markdown IMPLEMENTATION.
       WHEN OTHERS.
         APPEND |    { iv_text }|   TO mt_text.
     ENDCASE.
+    APPEND |```| TO mt_text.
 
     ro_gen = me.
 

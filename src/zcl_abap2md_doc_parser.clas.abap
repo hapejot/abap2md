@@ -37,7 +37,8 @@ ENDCLASS.
 
 
 
-CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
+CLASS ZCL_ABAP2MD_DOC_PARSER IMPLEMENTATION.
+
 
   METHOD parse.
     DATA: name       TYPE string,
@@ -47,7 +48,7 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
     CLEAR save_token.
     next_token( ).
     WHILE token IS NOT INITIAL.
-      ASSERT token <> save_token.
+*      ASSERT token <> save_token.
       save_token = token.
       CASE token-type.
         WHEN 'START'.
@@ -78,6 +79,7 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
 
   ENDMETHOD.
 
+
   METHOD handle_date.
 
     DATA date TYPE d.
@@ -89,13 +91,13 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
   ENDMETHOD.
 
 
-
   METHOD handle_start.
 
     next_token( ).
 
 
   ENDMETHOD.
+
 
   METHOD handle_parsep.
 
@@ -114,6 +116,7 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
 
   ENDMETHOD.
 
+
   METHOD handle_word.
 
     require_current_text( ).
@@ -123,6 +126,7 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
 
   ENDMETHOD.
 
+
   METHOD handle_end.
 
     CLEAR current_page.
@@ -130,6 +134,7 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
     next_token( ).
 
   ENDMETHOD.
+
 
   METHOD handle_cmd.
 
@@ -188,6 +193,7 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
 
   ENDMETHOD.
 
+
   METHOD read_words_in_line.
 **/
 * reads all the remaining words on the same line.
@@ -211,9 +217,11 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
     ENDWHILE.
   ENDMETHOD.
 
+
   METHOD require_current_text.
 
   ENDMETHOD.
+
 
   METHOD next_token.
 
@@ -221,12 +229,11 @@ CLASS zcl_abap2md_doc_parser IMPLEMENTATION.
 
   ENDMETHOD.
 
+
   METHOD constructor.
 
     me->code = i_code.
     me->doc = i_doc.
 
   ENDMETHOD.
-
-
 ENDCLASS.
